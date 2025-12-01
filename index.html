@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>덴트찰리 - 치과 환자 커뮤니케이션 연습</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+            background-color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .tagline {
+            font-size: 1.125rem;
+            font-weight: 400;
+            color: #666666;
+            margin-bottom: 4rem;
+            line-height: 1.6;
+        }
+
+        .primary-button {
+            display: inline-block;
+            background-color: #20b2aa;
+            color: #ffffff;
+            font-size: 1.25rem;
+            font-weight: 600;
+            padding: 1.25rem 3rem;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(32, 178, 170, 0.2);
+            text-decoration: none;
+        }
+
+        .primary-button:hover {
+            background-color: #1a9d96;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(32, 178, 170, 0.3);
+        }
+
+        .primary-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(32, 178, 170, 0.2);
+        }
+
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .tagline {
+                font-size: 1rem;
+                margin-bottom: 3rem;
+            }
+
+            .primary-button {
+                font-size: 1.125rem;
+                padding: 1rem 2.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .tagline {
+                font-size: 0.9rem;
+                margin-bottom: 2.5rem;
+            }
+
+            .primary-button {
+                font-size: 1rem;
+                padding: 0.875rem 2rem;
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>덴트찰리</h1>
+        <p class="tagline">치과 환자 커뮤니케이션, 지금 바로 연습해보세요.</p>
+        <a href="case-selection.html" class="primary-button">환자와 대화 시작하기</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>덴트찰리 - 시뮬레이션</title>
+    <style>
+        :root {
+            --bg-main: #222831;
+            --bg-sidebar: #2f3c48;
+            --bg-chat: #1c222a;
+            --patient-bubble: #5c6b73;
+            --user-bubble: #1dd1a1;
+            --text-main: #f5f9ff;
+            --text-muted: #c4cbd8;
+            --accent: #00a3ff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-shell {
+            display: grid;
+            grid-template-columns: 320px 1fr 80px;
+            height: 100vh;
+            transition: grid-template-columns 0.3s ease;
+        }
+
+        .app-shell.sidebar-hidden {
+            grid-template-columns: 0 1fr 80px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--bg-sidebar);
+            padding: 28px 24px;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .app-shell.sidebar-hidden .sidebar {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.1rem;
+        }
+
+        .toggle-btn,
+        .end-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: var(--text-main);
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .toggle-btn:hover,
+        .end-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .ccg-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .ccg-step {
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.15);
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .ccg-step.active {
+            background: rgba(0, 163, 255, 0.15);
+            color: var(--text-main);
+            border-left: 3px solid var(--accent);
+        }
+
+        .ccg-step.active::before {
+            content: "▶ ";
+            color: var(--accent);
+        }
+
+        /* Chat area */
+        .conversation-area {
+            background: var(--bg-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .top-bar {
+            padding: 20px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .scenario-info span {
+            display: block;
+            color: var(--text-muted);
+        }
+
+        .timer {
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+        }
+
+        .chat-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .chat-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 999px;
+        }
+
+        .message {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.08);
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .bubble {
+            max-width: 70%;
+            padding: 14px 18px;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .message.patient .bubble {
+            background: var(--patient-bubble);
+            color: #f0f4ff;
+        }
+
+        .message.user .bubble {
+            background: rgba(29, 209, 161, 0.15);
+            border: 1px solid rgba(29, 209, 161, 0.4);
+            color: var(--text-main);
+        }
+
+        /* Input bar */
+        .input-bar {
+            padding: 16px 28px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            background: var(--bg-chat);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .input-field {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 14px 16px;
+            color: var(--text-main);
+            font-size: 1rem;
+        }
+
+        .input-field::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .mic-btn {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: var(--accent);
+            border: none;
+            color: #041a24;
+            font-size: 1.3rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* Right spacer */
+        .spacer {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        @media (max-width: 1024px) {
+            .app-shell {
+                grid-template-columns: 280px 1fr;
+            }
+
+            .spacer {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-shell {
+                grid-template-columns: 0 1fr;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: 280px;
+                z-index: 10;
+            }
+
+            .chat-scroll .message .bubble {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell" id="app-shell">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>대화 흐름 가이드 (CCG)</h2>
+                <button class="toggle-btn" id="toggle-btn">닫기</button>
+            </div>
+            <div class="ccg-steps">
+                <div class="ccg-step">1. 인사 및 이름 확인</div>
+                <div class="ccg-step">2. 대화 목적 안내</div>
+                <div class="ccg-step active">3. 방문 이유 확인</div>
+                <div class="ccg-step">4. 정보 수집 및 공감</div>
+                <div class="ccg-step">5. 치료 계획 설명</div>
+                <div class="ccg-step">6. 다음 단계 합의</div>
+            </div>
+            <p class="sidebar-tip">현재 단계에 집중하면서 환자의 감정과 필요를 함께 확인해 보세요.</p>
+        </aside>
+
+        <section class="conversation-area">
+            <div class="top-bar">
+                <div class="scenario-info">
+                    <strong>시나리오: 이지원 환자</strong>
+                    <span>치주 질환 · 중급 난이도</span>
+                </div>
+                <div class="timer" id="timer">00:00</div>
+                <button class="end-btn">시뮬레이션 종료</button>
+            </div>
+
+            <div class="chat-scroll" id="chat-scroll">
+                <div class="message patient">
+                    <img class="avatar" src="" alt="환자 아바타">
+                    <!-- src="data:image/png;base64,..." -->
+                    <div class="bubble">안녕하세요, 의사 선생님. 요즘 잇몸이 자꾸 붓고 피가 나서 걱정이에요.</div>
+                </div>
+                <div class="message user">
+                    <div class="bubble">안녕하세요, 이지원 님. 많이 불편하셨겠어요. 언제부터 이런 증상이 있었나요?</div>
+                </div>
+                <div class="message patient">
+                    <img class="avatar" src="" alt="환자 아바타">
+                    <!-- src="data:image/png;base64,..." -->
+                    <div class="bubble">한 두 달 전부터 양치할 때마다 피가 나고, 잇몸이 욱신거리더라고요.</div>
+                </div>
+                <div class="message user">
+                    <div class="bubble">최근에 치실이나 구강세정기 같은 보조용품은 사용해 보셨어요?</div>
+                </div>
+                <div class="message patient">
+                    <img class="avatar" src="" alt="환자 아바타">
+                    <!-- src="data:image/png;base64,..." -->
+                    <div class="bubble">아니요, 평소에 양치만 했어요. 따로 관리법이 있을까요?</div>
+                </div>
+            </div>
+
+            <div class="input-bar">
+                <input type="text" class="input-field" placeholder="메시지를 입력하거나, 마이크 버튼으로 말해주세요.">
+                <button class="mic-btn">🎙</button>
+            </div>
+        </section>
+
+        <div class="spacer"></div>
+    </div>
+
+    <script>
+        const toggleBtn = document.getElementById('toggle-btn');
+        const appShell = document.getElementById('app-shell');
+        const sidebar = document.getElementById('sidebar');
+
+        toggleBtn.addEventListener('click', () => {
+            const hidden = appShell.classList.toggle('sidebar-hidden');
+            toggleBtn.textContent = hidden ? '열기' : '닫기';
+        });
+
+        // Simple timer mock
+        const timerElement = document.getElementById('timer');
+        let seconds = 0;
+        setInterval(() => {
+            seconds += 1;
+            const minutes = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const secs = String(seconds % 60).padStart(2, '0');
+            timerElement.textContent = `${minutes}:${secs}`;
+        }, 1000);
+    </script>
+</body>
+</html>
+
