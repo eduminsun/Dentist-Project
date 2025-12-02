@@ -222,13 +222,15 @@
         }
 
         .feedback-box.positive {
-            background: rgba(29, 209, 161, 0.12);
-            color: #c7fff0;
+            background: rgba(76, 175, 80, 0.15);
+            color: #81c784;
+            border-color: rgba(76, 175, 80, 0.3) !important;
         }
 
         .feedback-box.improve {
-            background: rgba(255, 127, 80, 0.12);
-            color: #ffd5c6;
+            background: rgba(244, 67, 54, 0.15);
+            color: #ef5350;
+            border-color: rgba(244, 67, 54, 0.3) !important;
         }
 
         .actions {
@@ -289,10 +291,10 @@
 </head>
 <body>
     <main>
-        <section class="summary-section">
+        <!-- <section class="summary-section">
             <div class="summary-header">
                 <p class="eyebrow">DentCharlie Simulation</p>
-                <h1>시뮬레이션 결과 및 분석</h1>
+                <h1>시뮬레이션 결과 및 분석</h1> 
                 <div class="score-highlight">총점 85점</div>
                 <p class="summary-copy">전체 CCG 흐름 중 4개 단계를 완수했으며, 정보 수집과 공감 표현에서 강점을 보였습니다.</p>
             </div>
@@ -321,83 +323,33 @@
                 </div>
             </div>
 
-            <div class="ccg-checklist">
-                <div class="ccg-item pass">
-                    <span class="icon">V</span>
-                    <span>1. 인사 및 이름 확인</span>
-                </div>
-                <div class="ccg-item pass">
-                    <span class="icon">V</span>
-                    <span>2. 대화 목적 안내</span>
-                </div>
-                <div class="ccg-item fail">
-                    <span class="icon">X</span>
-                    <span>3. 존중/관심 표현하기</span>
-                </div>
-                <div class="ccg-item pass">
-                    <span class="icon">V</span>
-                    <span>4. 방문 이유 확인</span>
-                </div>
-                <div class="ccg-item fail">
-                    <span class="icon">X</span>
-                    <span>5. 다음 단계 안내 및 합의</span>
-                </div>
+            <div class="ccg-checklist" id="rubric-checklist">
+                <!-- 루브릭이 여기에 동적으로 렌더링됨 -->
             </div>
 
-            <div class="improvements">
+            <div class="improvements" id="improvements-section" style="display: none;">
                 <h3>다음 연습에서 집중할 개선 포인트</h3>
-                <ul>
-                    <li>환자 감정에 공감하며 재진술하는 표현을 한 번 이상 시도해 보세요.</li>
-                    <li>대화 말미에 요약 및 다음 단계(치료 계획, 일정)를 명확히 안내하세요.</li>
-                    <li>환자 말 중 불확실한 부분은 개방형 질문으로 재확인해 정확도를 높이세요.</li>
-                </ul>
+                <ul id="improvements-list"></ul>
             </div>
-        </section>
+        </section> -->
 
         <section class="history-section">
-            <h2>대화 히스토리 상세 복기</h2>
-            <div class="history-wrapper">
-                <div class="conversation-entry">
-                    <div class="chat-row patient">
-                        <img class="avatar" src="" alt="환자 아바타">
-                        <!-- src="data:image/png;base64,..." -->
-                        <div class="chat-bubble">선생님, 요 며칠 계속 어금니가 시리고 밥 먹기가 힘들어요.</div>
-                    </div>
-                    <div class="feedback-box positive">불편감을 먼저 묻고 공감하는 흐름이 좋았습니다. CCG 1·2단계 자연스럽게 통과했습니다.</div>
-                </div>
-
-                <div class="conversation-entry">
-                    <div class="chat-row me">
-                        <img class="avatar" src="" alt="사용자 아바타">
-                        <div class="chat-bubble">몇 일이든 괜찮습니다. 일단 치료 계획부터 이야기해볼까요?</div>
-                    </div>
-                    <div class="feedback-box improve">환자의 감정에 대한 공감 표현이 빠져 공감 단계(CCG 3)가 누락되었습니다. “많이 불편하셨겠어요” 등 공감 문장을 추가해 보세요.</div>
-                </div>
-
-                <div class="conversation-entry">
-                    <div class="chat-row patient">
-                        <img class="avatar" src="" alt="환자 아바타">
-                        <!-- src="data:image/png;base64,..." -->
-                        <div class="chat-bubble">치료하면 오래 걸리나요? 그리고 혹시 많이 아플까요?</div>
-                    </div>
-                    <div class="feedback-box positive">환자의 우려를 정확히 파악할 수 있는 좋은 닫힌 질문이었습니다. 다음에도 불안을 확인하는 질문을 유지하세요.</div>
-                </div>
-
-                <div class="conversation-entry">
-                    <div class="chat-row me">
-                        <img class="avatar" src="" alt="사용자 아바타">
-                        <div class="chat-bubble">아플 수도 있지만 참을 만할 거예요. 그리고 다음 주 화요일에 바로 치료 들어가죠.</div>
-                    </div>
-                    <div class="feedback-box improve">치료 선택에 대한 환자 동의 과정이 부족했습니다. 치료 시점과 방법을 제안할 때 환자 의사를 확인하고 대안을 함께 논의해 주세요.</div>
-                </div>
-
-                <div class="conversation-entry">
-                    <div class="chat-row patient">
-                        <img class="avatar" src="" alt="환자 아바타">
-                        <!-- src="data:image/png;base64,..." -->
-                        <div class="chat-bubble">혹시 더 궁금한 게 있으면 연락드려도 될까요?</div>
-                    </div>
-                    <div class="feedback-box positive">추가 질문을 환영하는 태도가 좋았습니다. 신뢰감을 유지하는 긍정적 마무리였습니다.</div>
+            <h2>대화 복기 및 결과 분석</h2>
+            <!-- ✅ 피드백 생성 중 로딩 화면 -->
+            <div id="loading-state" style="display: none; text-align: center; padding: 60px 20px;">
+                <div style="font-size: 1.2rem; margin-bottom: 20px; color: var(--text-bright);">피드백을 생성 중입니다...</div>
+                <div style="display: inline-block; width: 50px; height: 50px; border: 4px solid rgba(0, 163, 255, 0.2); border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <style>
+                    @keyframes spin {
+                        to { transform: rotate(360deg); }
+                    }
+                </style>
+            </div>
+            
+            <!-- ✅ 대화 복기 (피드백 완료 후 표시) -->
+            <div id="content-state" style="display: none;">
+                <div class="history-wrapper">
+                    <!-- 대화와 피드백이 여기에 렌더링됨 -->
                 </div>
             </div>
         </section>
@@ -408,25 +360,67 @@
         </section>
     </main>
     <script>
-        // Render last conversation saved from simulation (if any)
-        (function renderSavedConversation(){
+        // ✅ 피드백 생성 상태 관리
+        function renderConversation() {
             try {
                 const raw = localStorage.getItem('last_conversation');
-                if (!raw) return;
+                if (!raw) {
+                    console.warn('No conversation found');
+                    return;
+                }
+                
                 const data = JSON.parse(raw);
-                const wrapper = document.querySelector('.history-wrapper');
+                
+                // ✅ 로딩 상태 확인
+                const loadingState = document.getElementById('loading-state');
+                const contentState = document.getElementById('content-state');
+                
+                if (data.isGenerating) {
+                    // 피드백 생성 중 → 로딩 화면 표시
+                    loadingState.style.display = 'block';
+                    contentState.style.display = 'none';
+                    return;
+                }
+                
+                // 피드백 생성 완료 → 대화 복기 표시
+                loadingState.style.display = 'none';
+                contentState.style.display = 'block';
+                
+                // ✅ 루브릭 체크리스트 렌더링
+                renderRubric(data.feedbacks);
+                
+                const wrapper = contentState.querySelector('.history-wrapper');
                 if (!wrapper) return;
+                
+                // 피드백 맵 생성 (빠른 조회용)
+                const feedbackMap = {};
+                if (data.feedbacks) {
+                    data.feedbacks.forEach(fb => {
+                        if (!feedbackMap[fb.turn_index]) {
+                            feedbackMap[fb.turn_index] = [];
+                        }
+                        feedbackMap[fb.turn_index].push(fb);
+                    });
+                }
+                
                 const imgMap = {
                     'lee-jiwon': '이지원.png',
                     'jo-minseon': '조민선.png',
-                    'oh-owan': '오완.png'
+                    'oh-owan': '오완 보호자.png'
                 };
-                // create a block for the saved conversation
+                
+                // 기존 내용 제거
+                wrapper.innerHTML = '';
+                
+                // 대화 블록 생성
                 const convBlock = document.createElement('div');
                 convBlock.className = 'conversation-entry';
-                data.items.forEach(item => {
+                
+                data.items.forEach((item, turnIndex) => {
+                    // 대화 메시지
                     const row = document.createElement('div');
                     row.className = 'chat-row ' + (item.role === 'user' ? 'me' : 'patient');
+                    
                     if (item.role === 'patient') {
                         const img = document.createElement('img');
                         img.className = 'avatar';
@@ -447,13 +441,81 @@
                         row.appendChild(bubble);
                     }
                     convBlock.appendChild(row);
+                    
+                    // 이 턴에 피드백이 있으면 추가 (의사 발언에만)
+                    if (item.role === 'user' && feedbackMap[turnIndex]) {
+                        feedbackMap[turnIndex].forEach(fb => {
+                            const feedbackBox = document.createElement('div');
+                            feedbackBox.className = 'feedback-box ' + (fb.done ? 'positive' : 'improve');
+                            feedbackBox.textContent = `• ${fb.text}`;
+                            convBlock.appendChild(feedbackBox);
+                        });
+                    }
                 });
-                // insert at top of wrapper
-                wrapper.insertBefore(convBlock, wrapper.firstChild);
+                
+                wrapper.appendChild(convBlock);
             } catch (e) {
-                console.warn('no saved conversation', e);
+                console.warn('Error rendering conversation:', e);
             }
-        })();
+        }
+
+        // ✅ 루브릭 체크리스트 렌더링
+        function renderRubric(feedbacks) {
+            const rubricDiv = document.getElementById('rubric-checklist');
+            const improvementsSection = document.getElementById('improvements-section');
+            const improvementsList = document.getElementById('improvements-list');
+            
+            if (!feedbacks || feedbacks.length === 0) {
+                rubricDiv.innerHTML = '<p style="text-align: center; color: var(--text-muted);">피드백을 불러올 수 없습니다.</p>';
+                return;
+            }
+            
+            rubricDiv.innerHTML = '';
+            const improvements = [];
+            
+            // 5단계 루브릭 순서
+            const stages = ['1단계', '2단계', '3단계', '4단계', '5단계'];
+            
+            feedbacks.forEach(fb => {
+                // stage 문자열에서 단계 번호 추출
+                const stageNum = fb.stage.substring(0, 3); // "1단계" 형식
+                const isDone = fb.done === true;
+                
+                const item = document.createElement('div');
+                item.className = 'ccg-item ' + (isDone ? 'pass' : 'fail');
+                item.innerHTML = `
+                    <span class="icon">${isDone ? 'V' : 'X'}</span>
+                    <span>${fb.stage}</span>
+                `;
+                rubricDiv.appendChild(item);
+                
+                // 개선 필요한 항목 수집
+                if (!isDone) {
+                    improvements.push(fb.text);
+                }
+            });
+            
+            // 개선 포인트 섹션 표시/숨김
+            if (improvements.length > 0) {
+                improvementsSection.style.display = 'block';
+                improvementsList.innerHTML = improvements
+                    .map(text => `<li>${text}</li>`)
+                    .join('');
+            } else {
+                improvementsSection.style.display = 'none';
+            }
+        }
+
+        // ✅ 초기 렌더링
+        renderConversation();
+        
+        // ✅ 피드백이 완료되면 다시 렌더링
+        window.addEventListener('feedbackReady', () => {
+            console.log('Feedback ready event received');
+            // 약간의 딜레이 후 다시 렌더링
+            setTimeout(renderConversation, 500);
+        });
+
         document.getElementById('retry-btn')?.addEventListener('click', () => {
             location.href = 'simulation.html';
         });
@@ -462,5 +524,4 @@
         });
     </script>
 </body>
-</html>
-
+</html>        </section>

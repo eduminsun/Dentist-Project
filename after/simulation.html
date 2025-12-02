@@ -463,13 +463,67 @@
         // End simulation -> feedback
         const endBtn = document.getElementById('end-btn');
         if (endBtn) {
-            endBtn.addEventListener('click', () => {
+            endBtn.addEventListener('click', async () => {
                 try {
-                    localStorage.setItem('last_conversation', JSON.stringify({caseId: selected, items: conversationHistory}));
+                    endBtn.disabled = true;
+                    endBtn.textContent = '피드백 분석 중...';
+
+                    // ✅ 피드백 생성 중 상태를 먼저 저장
+                    localStorage.setItem('last_conversation', JSON.stringify({
+                        caseId: selected,
+                        items: conversationHistory,
+                        feedbacks: [],
+                        isGenerating: true
+                    }));
+                    
+                    // 피드백 화면으로 이동 (로딩 상태 표시)
+                    window.location.href = 'feedback.html';
+                    
+                    // ✅ 백그라운드에서 피드백 생성
+                    setTimeout(async () => {
+                        try {
+                            const feedbackRes = await fetch('/api/feedback', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    conversationHistory: conversationHistory,
+                                    caseId: selected
+                                })
+                            });
+
+                            if (!feedbackRes.ok) {
+                                console.error('Feedback API error:', feedbackRes.status);
+                            }
+
+                            const feedbackData = await feedbackRes.json();
+                            console.log('Feedback received:', feedbackData);
+
+                            // 피드백 완료 후 업데이트
+                            localStorage.setItem('last_conversation', JSON.stringify({
+                                caseId: selected,
+                                items: conversationHistory,
+                                feedbacks: feedbackData.feedbacks || [],
+                                isGenerating: false
+                            }));
+                            
+                            // 피드백 페이지에 새로고침 신호
+                            window.dispatchEvent(new CustomEvent('feedbackReady'));
+                        } catch (e) {
+                            console.error('Error generating feedback:', e);
+                            // 피드백 없이 표시
+                            localStorage.setItem('last_conversation', JSON.stringify({
+                                caseId: selected,
+                                items: conversationHistory,
+                                feedbacks: [],
+                                isGenerating: false
+                            }));
+                            window.dispatchEvent(new CustomEvent('feedbackReady'));
+                        }
+                    }, 100);
                 } catch (e) {
-                    console.warn('failed to save conversation', e);
+                    console.error('Error in end button handler:', e);
+                    window.location.href = 'feedback.html';
                 }
-                window.location.href = 'feedback.html';
             });
         }
 
@@ -491,14 +545,14 @@
                 title: '시나리오: 조민선',
                 info: 'F · 30 · 민감형',
                 messages: [
-                    {role: 'patient', text: '사랑니 부위가 부은 것 같고 씹을 때 아파요.'}
+                    {role: 'patient', text: '사랑니 부위가 부은 것 같고 씹을 때 아파요. 그런데 발치는 정말 하기 싫어요.'}
                 ]
             },
             'oh-owan': {
                 title: '시나리오: 오완',
-                info: 'M · 8 · 상담형',
+                info: 'M · 8 · 상담형 (보호자 동반)',
                 messages: [
-                    {role: 'patient', text: '아이가 발음을 잘 못하고 혀가 위로 안 올라가요.'}
+                    {role: 'patient', text: '아이가 발음을 잘 못하고 혀가 위로 안 올라가서요. 어머니인데 상담드리고 싶습니다.'}
                 ]
             }
         };
@@ -521,7 +575,7 @@
                     'oh-owan': '오완 보호자.png'
                 };
                 const imgFile = imgMap[selected] || 'patient.png';
-                const imgSrc = `images/${imgFile}`;
+                const imgSrc = `/after/images/${imgFile}`;
                 wrapper.innerHTML = `<div class="avatar" style="background-image:url('${imgSrc}');background-size:cover;background-position:center;border-radius:12px;width:46px;height:46px;"></div><div class="bubble">${text}</div>`;
             } else {
                 wrapper.innerHTML = `<div class="bubble">${text}</div>`;
@@ -627,8 +681,8 @@
             if (!text) return;
             appendMessage('user', text);
             inputField.value = '';
-            // call serverless LLM endpoint
-            const payload = { caseId: selected, userMessage: text, recent: conversationHistory };
+            // call serverless LLM endpoint with caseId, current step, and conversation history
+            const payload = { caseId: selected, userMessage: text, recent: conversationHistory, currentStep: currentStep };
             // show typing placeholder (transient, not recorded)
             appendMessage('patient', '...', false);
             const typingEl = chatMessages.lastElementChild;
@@ -638,16 +692,41 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
-            }).then(r => r.json()).then(json => {
-                // remove last placeholder
+            })
+            .then(async (r) => {
+                // read raw body text first (handles JSON and plain text errors)
+                const raw = await r.text().catch(() => '');
+                if (!r.ok) {
+                    // non-2xx: show server/provider response (if any)
+                    if (typingEl && typingEl.parentElement) typingEl.remove();
+                    const msg = raw || `서버 응답 오류: ${r.status}`;
+                    appendMessage('patient', `서버 오류: ${msg}`);
+                    throw new Error(msg);
+                }
+                // try to parse JSON; if it fails, show raw text as reply
+                let json = null;
+                try {
+                    json = JSON.parse(raw || '{}');
+                } catch (e) {
+                    if (typingEl && typingEl.parentElement) typingEl.remove();
+                    const fallback = raw || '응답 포맷 오류';
+                    appendMessage('patient', fallback);
+                    return;
+                }
                 if (typingEl && typingEl.parentElement) typingEl.remove();
                 const reply = json?.text || '죄송합니다, 응답이 없습니다.';
                 appendMessage('patient', reply);
-            }).catch(err => {
+            })
+            .catch(err => {
                 if (typingEl && typingEl.parentElement) typingEl.remove();
-                appendMessage('patient', '응답에 실패했습니다. 나중에 다시 시도해주세요.');
                 console.error('fetch error', err);
-            }).finally(() => {
+                // If an error message was already shown above, avoid duplicate generic message
+                const errText = (err && err.message) ? err.message : '';
+                if (!errText.includes('서버 오류')) {
+                    appendMessage('patient', '응답에 실패했습니다. 나중에 다시 시도해주세요.');
+                }
+            })
+            .finally(() => {
                 inputField.disabled = false;
                 sendBtn.disabled = false;
                 inputField.focus();
