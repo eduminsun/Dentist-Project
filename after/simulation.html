@@ -104,6 +104,7 @@
             background: rgba(0, 0, 0, 0.15);
             font-size: 0.95rem;
             color: var(--text-muted);
+            cursor: pointer;
         }
 
         .ccg-step.active {
@@ -142,6 +143,39 @@
             font-weight: 600;
             letter-spacing: 0.1em;
             color: var(--accent);
+        }
+
+        /* Suggestions panel placed at bottom of sidebar */
+        .suggestions-panel {
+            margin-top: auto;
+            padding: 14px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .suggestions-panel h4 {
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+        }
+
+        .suggestion-chip {
+            background: rgba(255,255,255,0.03);
+            color: var(--text-main);
+            padding: 8px 10px;
+            border-radius: 16px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.02);
+            margin: 4px;
+            display: inline-block;
+        }
+
+        .suggestion-chip:hover {
+            background: rgba(0,163,255,0.12);
+            color: white;
+            transform: translateY(-2px);
         }
 
         .chat-scroll {
@@ -340,6 +374,15 @@
                 <div class="ccg-step">5. 진료 마무리</div>
             </div>
             <p class="sidebar-tip">각 단계에 집중하면서 환자의 감정과 필요를 함께 확인해 보세요.</p>
+
+            <div class="suggestions-panel" id="suggestions-panel" aria-hidden="false">
+                <h4 id="suggestions-title">추천 질문 (인사 및 환자 확인)</h4>
+                <div id="suggestion-chips" aria-live="polite"></div>
+                <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
+                    <button id="prev-step-btn" class="toggle-btn" type="button">이전 단계</button>
+                    <button id="next-step-btn" class="toggle-btn" type="button">다음 단계</button>
+                </div>
+            </div>
         </aside>
 
         <section class="conversation-area">
@@ -350,6 +393,11 @@
                 </div>
                 <div class="timer" id="timer">00:00</div>
                 <button class="end-btn" id="end-btn">시뮬레이션 종료</button>
+            </div>
+
+            <!-- Suggestions for current step (step 1 shown by default) -->
+            <div class="suggestions" id="suggestions" aria-hidden="false">
+                <!-- chips populated by JS -->
             </div>
 
             <div class="chat-scroll" id="chat-scroll">
@@ -462,7 +510,7 @@
 
     const chatMessages = document.getElementById('chat-messages');
     const conversationHistory = [];
-        function appendMessage(role, text) {
+    function appendMessage(role, text, record = true) {
             const wrapper = document.createElement('div');
             wrapper.className = `message ${role === 'user' ? 'user' : 'patient'}`;
             if (role === 'patient') {
@@ -479,14 +527,96 @@
                 wrapper.innerHTML = `<div class="bubble">${text}</div>`;
             }
             chatMessages.appendChild(wrapper);
-            // record message
-            conversationHistory.push({role, text, ts: Date.now()});
+            // record message (unless this is a transient/typing placeholder)
+            if (record) conversationHistory.push({role, text, ts: Date.now()});
             // scroll to bottom
             chatMessages.parentElement.scrollTop = chatMessages.parentElement.scrollHeight;
         }
 
         // render initial messages
         meta.messages.forEach(m => appendMessage(m.role, m.text));
+
+        // --- CCG step management and suggestion sets
+        const ccgStepEls = Array.from(document.querySelectorAll('.ccg-step'));
+        let currentStep = 0; // 0-based index for steps 1..5
+
+        // suggestion sets per patient id (lee-jiwon, jo-minseon, oh-owan)
+        const suggestionSetsByPatient = {
+            'lee-jiwon': [
+                ['안녕하세요, 이지원 씨 맞으시죠?','저는 치과의사 ○○○입니다. 입안 불편감에 대해 이야기 나눠도 될까요?','편하게 말씀해주세요. 불편한 점 있으면 알려주세요.'],
+                ['오늘 어떤 문제로 오셨나요?','다른 증상이나 걱정되는 점도 있으신가요?','가장 불편한 증상부터 말씀해 주시겠어요?'],
+                ['언제부터 이런 증상이 있었나요?','증상이 시작될 때 어떤 상황이었나요?','음식을 먹을 때 증상이 더 악화되나요?'],
+                ['제가 보기엔 작은 궤양 가능성이 있어 보여요. 치료 방향은 두 가지입니다.','면역이 약해지면 점막이 쉽게 헐 수 있어요. 연고와 생활습관 조정으로 경과를 볼 수 있습니다.','설명드린 내용 괜찮으셨나요? 추가로 궁금한 점 있으세요?'],
+                ['생활습관을 조정하고 경과를 관찰해보는 방향으로 진행해도 괜찮을까요?','2주간 지켜보고 필요하면 다시 오세요. 통증 심해지면 바로 내원해주세요.','마지막으로 더 궁금한 점 있으신가요?']
+            ],
+            'jo-minseon': [
+                ['안녕하세요, 조민선님 맞으시죠?','저는 치과의사 ○○○입니다.','아픈 곳 불편하시면 말씀해 주세요.'],
+                ['사랑니 쪽 불편감 때문에 오셨다고 들었는데 이야기 나눠도 괜찮을까요?','오늘 어떤 증상이 가장 신경 쓰이세요?','다른 불편한 점도 있으세요?'],
+                ['언제부터 아프기 시작했나요?','통증은 씹을 때만 생기나요?','붓기나 입 못 벌림도 있나요?'],
+                ['정리하면 며칠 전부터 사랑니 주변이 붓고 씹을 때 통증이 있다는 말씀이죠?','사랑니 주변 잇몸이 염증으로 붓는 경우가 많아요.','약물 치료로 가라앉히고 이후 발치 여부를 판단해야 합니다.'],
+                ['우선 세정 및 약물치료를 시행하고 추적관찰하겠습니다.','부종이 심해지거나 입이 잘 안 벌어지면 바로 내원해주세요.','더 궁금한 점 있으세요?']
+            ],
+            'oh-owan': [
+                ['안녕하세요 보호자님, 아이 이름이 오완 맞나요?','저는 치과의사 ○○○입니다.'],
+                ['아이 혀 움직임이 걱정되셔서 오셨다고 들었습니다. 확인해도 괜찮을까요?','어떤 점 때문에 혀가 짧다고 느끼셨나요?'],
+                ['언제부터 아이의 발음에 문제가 있다고 느끼셨어요?','특정 발음에서만 어려움이 있나요?','발음 외에 다른 걱정되는 점은 있나요?'],
+                ['지금까지는 발음 어려움·혀 들기 어려움이 있다는 점이군요.','혀 밑에 있는 실 같은 부분이 짧으면 이런 증상이 생길 수 있어요.','단순 관찰, 혀 운동 치료, 절개술 총 3가지의 방법이 있습니다'],
+                ['일주일 후 다시 발음과 혀 움직임을 확인하겠습니다.','혀가 계속 아프거나 말하기가 더 어려워지면 바로 내원해주세요.','마지막으로 더 궁금한 점 있으신가요?']
+            ]
+        };
+
+        const suggestionChipsContainer = document.getElementById('suggestion-chips');
+        const suggestionsTitle = document.getElementById('suggestions-title');
+
+        function buildSuggestionChip(text){
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'suggestion-chip';
+            btn.textContent = text;
+            btn.addEventListener('click', () => {
+                const input = document.getElementById('message-input');
+                input.value = text;
+                input.focus();
+            });
+            return btn;
+        }
+
+    function renderSuggestionsForStep(stepIndex){
+            // intent map and bounds
+            const intentMap = ['인사 및 환자 확인','방문 이유 확인','정보 수집 및 공감','치료 계획 설명','진료 마무리'];
+            const maxIdx = intentMap.length - 1;
+            const idx = Math.max(0, Math.min(stepIndex, maxIdx));
+            currentStep = idx;
+            // active class on sidebar steps
+            ccgStepEls.forEach((el, i) => el.classList.toggle('active', i === idx));
+            // update title
+            suggestionsTitle.textContent = `추천 질문 (${intentMap[idx]})`;
+            // choose set by selected patient id
+            const patientId = selected || 'lee-jiwon';
+            const setsForPatient = suggestionSetsByPatient[patientId] || suggestionSetsByPatient['lee-jiwon'];
+            // clear chips
+            suggestionChipsContainer.innerHTML = '';
+            (setsForPatient[idx] || []).forEach(txt => suggestionChipsContainer.appendChild(buildSuggestionChip(txt)));
+            // prev/next visibility
+            const prevBtn = document.getElementById('prev-step-btn');
+            const nextBtn = document.getElementById('next-step-btn');
+            if (prevBtn) prevBtn.style.display = idx === 0 ? 'none' : 'inline-block';
+            if (nextBtn) nextBtn.style.display = idx === maxIdx ? 'none' : 'inline-block';
+        }
+
+        // wire clicks on sidebar steps
+        ccgStepEls.forEach((el, i) => {
+            el.addEventListener('click', () => renderSuggestionsForStep(i));
+        });
+
+    // prev/next buttons
+    const nextStepBtn = document.getElementById('next-step-btn');
+    const prevStepBtn = document.getElementById('prev-step-btn');
+    if (nextStepBtn) nextStepBtn.addEventListener('click', () => renderSuggestionsForStep(currentStep + 1));
+    if (prevStepBtn) prevStepBtn.addEventListener('click', () => renderSuggestionsForStep(currentStep - 1));
+
+        // initial render
+        renderSuggestionsForStep(0);
 
         // enable send input
         const inputField = document.getElementById('message-input');
@@ -497,10 +627,31 @@
             if (!text) return;
             appendMessage('user', text);
             inputField.value = '';
-            // mock patient reply (simple echo with delay)
-            setTimeout(() => {
-                appendMessage('patient', '환자: ' + text + ' (자동 응답)');
-            }, 700);
+            // call serverless LLM endpoint
+            const payload = { caseId: selected, userMessage: text, recent: conversationHistory };
+            // show typing placeholder (transient, not recorded)
+            appendMessage('patient', '...', false);
+            const typingEl = chatMessages.lastElementChild;
+            inputField.disabled = true;
+            sendBtn.disabled = true;
+            fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(r => r.json()).then(json => {
+                // remove last placeholder
+                if (typingEl && typingEl.parentElement) typingEl.remove();
+                const reply = json?.text || '죄송합니다, 응답이 없습니다.';
+                appendMessage('patient', reply);
+            }).catch(err => {
+                if (typingEl && typingEl.parentElement) typingEl.remove();
+                appendMessage('patient', '응답에 실패했습니다. 나중에 다시 시도해주세요.');
+                console.error('fetch error', err);
+            }).finally(() => {
+                inputField.disabled = false;
+                sendBtn.disabled = false;
+                inputField.focus();
+            });
         }
 
         sendBtn.addEventListener('click', sendMessage);
