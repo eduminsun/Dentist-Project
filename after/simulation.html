@@ -283,39 +283,20 @@
         <section class="conversation-area">
             <div class="top-bar">
                 <div class="scenario-info">
-                    <strong>시나리오: 이지원 환자</strong>
-                    <span>치주 질환 · 중급 난이도</span>
+                    <strong id="case-title">시나리오</strong>
+                    <span id="patient-info">환자 정보</span>
                 </div>
                 <div class="timer" id="timer">00:00</div>
-                <button class="end-btn">시뮬레이션 종료</button>
+                <button class="end-btn" id="end-btn">시뮬레이션 종료</button>
             </div>
 
             <div class="chat-scroll" id="chat-scroll">
-                <div class="message patient">
-                    <img class="avatar" src="" alt="환자 아바타">
-                    <!-- src="data:image/png;base64,..." -->
-                    <div class="bubble">안녕하세요, 의사 선생님. 요즘 잇몸이 자꾸 붓고 피가 나서 걱정이에요.</div>
-                </div>
-                <div class="message user">
-                    <div class="bubble">안녕하세요, 이지원 님. 많이 불편하셨겠어요. 언제부터 이런 증상이 있었나요?</div>
-                </div>
-                <div class="message patient">
-                    <img class="avatar" src="" alt="환자 아바타">
-                    <!-- src="data:image/png;base64,..." -->
-                    <div class="bubble">한 두 달 전부터 양치할 때마다 피가 나고, 잇몸이 욱신거리더라고요.</div>
-                </div>
-                <div class="message user">
-                    <div class="bubble">최근에 치실이나 구강세정기 같은 보조용품은 사용해 보셨어요?</div>
-                </div>
-                <div class="message patient">
-                    <img class="avatar" src="" alt="환자 아바타">
-                    <!-- src="data:image/png;base64,..." -->
-                    <div class="bubble">아니요, 평소에 양치만 했어요. 따로 관리법이 있을까요?</div>
-                </div>
+                <div id="chat-messages"></div>
             </div>
 
             <div class="input-bar">
-                <input type="text" class="input-field" placeholder="메시지를 입력하거나, 마이크 버튼으로 말해주세요.">
+                <input type="text" class="input-field" id="message-input" placeholder="메시지를 입력하거나, 마이크 버튼으로 말해주세요.">
+                <button class="send-btn" id="send-btn">전송</button>
                 <button class="mic-btn">🎙</button>
             </div>
         </section>
@@ -342,6 +323,89 @@
             const secs = String(seconds % 60).padStart(2, '0');
             timerElement.textContent = `${minutes}:${secs}`;
         }, 1000);
+        // End simulation -> feedback
+        const endBtn = document.getElementById('end-btn');
+        if (endBtn) {
+            endBtn.addEventListener('click', () => {
+                window.location.href = 'feedback.html';
+            });
+        }
+
+        // Parse ?case and render patient header + initial messages
+        function getQueryParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
+        const cases = {
+            'lee-jiwon': {
+                title: '시나리오: 이지원',
+                info: 'F · 22 · 불안형',
+                messages: [
+                    {role: 'patient', text: '안녕하세요, 의사 선생님. 요즘 입 안이 쓰라려요.'},
+                    {role: 'patient', text: '한 두 달 전부터 찬물 마실 때 아파요.'}
+                ]
+            },
+            'jo-minseon': {
+                title: '시나리오: 조민선',
+                info: 'F · 24 · 민감형',
+                messages: [
+                    {role: 'patient', text: '치아 민감도가 심해서 따끔거려요.'}
+                ]
+            },
+            'oh-owan': {
+                title: '시나리오: 오완',
+                info: 'M · 33 · 상담형',
+                messages: [
+                    {role: 'patient', text: '임플란트 비용 때문에 문의드려요.'}
+                ]
+            }
+        };
+
+        const selected = getQueryParam('case') || 'lee-jiwon';
+        const meta = cases[selected] || cases['lee-jiwon'];
+        document.getElementById('case-title').textContent = meta.title;
+        document.getElementById('patient-info').textContent = meta.info;
+
+        const chatMessages = document.getElementById('chat-messages');
+        function appendMessage(role, text) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `message ${role === 'user' ? 'user' : 'patient'}`;
+            if (role === 'patient') {
+                wrapper.innerHTML = `<img class="avatar" src="" alt="환자 아바타"><div class="bubble">${text}</div>`;
+            } else {
+                wrapper.innerHTML = `<div class="bubble">${text}</div>`;
+            }
+            chatMessages.appendChild(wrapper);
+            // scroll to bottom
+            chatMessages.parentElement.scrollTop = chatMessages.parentElement.scrollHeight;
+        }
+
+        // render initial messages
+        meta.messages.forEach(m => appendMessage(m.role, m.text));
+
+        // enable send input
+        const inputField = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        function sendMessage() {
+            const text = inputField.value.trim();
+            if (!text) return;
+            appendMessage('user', text);
+            inputField.value = '';
+            // mock patient reply (simple echo with delay)
+            setTimeout(() => {
+                appendMessage('patient', '환자: ' + text + ' (자동 응답)');
+            }, 700);
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        inputField.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
     </script>
 </body>
 </html>

@@ -403,10 +403,18 @@
         </section>
 
         <section class="actions">
-            <button class="btn primary">다시 연습하기</button>
-            <button class="btn secondary">케이스 선택으로 돌아가기</button>
+            <button class="btn primary" id="retry-btn">다시 연습하기</button>
+            <button class="btn secondary" id="back-to-cases-btn">케이스 선택으로 돌아가기</button>
         </section>
     </main>
+    <script>
+        document.getElementById('retry-btn')?.addEventListener('click', () => {
+            location.href = 'simulation.html';
+        });
+        document.getElementById('back-to-cases-btn')?.addEventListener('click', () => {
+            location.href = 'case-selection.html';
+        });
+    </script>
 </body>
 </html>
 

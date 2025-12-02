@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DentCharley - 환자 커뮤니케이션 시뮬레이션</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 로고 버튼 (모든 화면에 표시) -->
+    <button class="logo-button" onclick="showScreen('main-screen')" title="메인으로 이동">
+        <div class="logo-icon"></div>
+    </button>
+
+    <!-- 온보딩 화면들 -->
+    <!-- 1. 웰컴 화면 -->
+    <section id="welcome-screen" class="screen active">
+        <div class="container">
+            <div class="welcome-content">
+                <h1 class="logo">DentCharley</h1>
+                <p class="subtitle">Practice real patient conversations to build your confidence</p>
+                <div class="character-container">
+                    <div class="pixel-character welcome-character"></div>
+                </div>
+                <button class="btn-primary" onclick="nextStep()">Get Started</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. 프로필 설정 화면 -->
+    <section id="profile-screen" class="screen">
+        <div class="container">
+            <div class="profile-layout">
+                <div class="character-section">
+                    <div class="pixel-character doctor-character">
+                        <div class="mouth"></div>
+                        <div class="cheek"></div>
+                        <div class="coat"></div>
+                        <div class="nose"></div>
+                    </div>
+                    <div class="speech-bubble" id="profile-speech-bubble">Nice to meet you!</div>
+                </div>
+                <div class="form-section">
+                    <h2>Tell us about yourself</h2>
+                    <div class="form-group">
+                        <label for="nickname">Nickname</label>
+                        <input type="text" id="nickname" placeholder="Enter your nickname">
+                    </div>
+                    <div class="form-group">
+                        <label>Year in dental school</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="year" value="3rd" checked>
+                                <span>3rd</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="year" value="4th">
+                                <span>4th</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="year" value="graduate">
+                                <span>Graduate</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Confidence level</label>
+                        <div class="button-group">
+                            <button class="confidence-btn" data-level="low">Low</button>
+                            <button class="confidence-btn active" data-level="medium">Medium</button>
+                            <button class="confidence-btn" data-level="high">High</button>
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="nextStep()">Next →</button>
+                    <div class="progress-indicator">Step 2 of 4</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. 학습 목표 선택 화면 -->
+    <section id="goals-screen" class="screen">
+        <div class="container">
+            <div class="goals-layout">
+                <div class="character-section">
+                    <div class="pixel-character doctor-character">
+                        <div class="mouth"></div>
+                        <div class="cheek"></div>
+                        <div class="coat"></div>
+                        <div class="nose"></div>
+                    </div>
+                    <div class="speech-bubble" id="goals-speech-bubble">We'll work on empathy together!</div>
+                </div>
+                <div class="goals-section">
+                    <h2>When communicating with patients, what do you find most challenging?</h2>
+                    <div class="goals-grid">
+                        <div class="goal-card" data-goal="explaining">
+                            <div class="goal-icon">📋</div>
+                            <span>Explaining procedures clearly</span>
+                        </div>
+                        <div class="goal-card" data-goal="calming">
+                            <div class="goal-icon">💬</div>
+                            <span>Calming anxious patients</span>
+                        </div>
+                        <div class="goal-card" data-goal="dealing">
+                            <div class="goal-icon">😰</div>
+                            <span>Dealing with anxious patients</span>
+                        </div>
+                        <div class="goal-card active" data-goal="empathy">
+                            <div class="goal-icon">💡</div>
+                            <span>Showing empathy</span>
+                        </div>
+                        <div class="goal-card" data-goal="questioning">
+                            <div class="goal-icon">❓</div>
+                            <span>Asking the right questions</span>
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="nextStep()">Next →</button>
+                    <div class="progress-indicator">Step 3 of 4</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. 케이스 준비 화면 -->
+    <section id="case-prep-screen" class="screen">
+        <div class="container">
+            <div class="case-prep-content">
+                <h2>Your first patient is ready.</h2>
+                <div class="case-info-card">
+                    <div class="patient-illustration">
+                        <div class="pixel-character patient-character"></div>
+                    </div>
+                    <div class="case-details">
+                        <h3>Patient: Jina Kim (F, 28, anxious type)</h3>
+                        <p><strong>Complaint:</strong> Tooth sensitivity</p>
+                        <p><strong>Tip:</strong> Try open-ended questions</p>
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="startSimulation()">Start Sample Simulation</button>
+                <div class="progress-indicator">Step 4 of 4</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 메인 화면들 -->
+    <!-- 메인 홈 화면 -->
+    <section id="main-screen" class="screen">
+        <div class="container">
+            <nav class="top-nav">
+                <div class="nav-brand">
+                    <div class="tooth-icon">🦷</div>
+                    <span>DentCharley</span>
+                </div>
+                <div class="nav-menu">
+                    <button class="nav-item active" onclick="showScreen('main-screen')">Case Library</button>
+                    <button class="nav-item" onclick="showScreen('dashboard-screen')">Dashboard</button>
+                    <button class="nav-item" onclick="showScreen('settings-screen')">Settings</button>
+                </div>
+                <div class="nav-search">🔍</div>
+            </nav>
+            
+            <div class="main-content">
+                <div class="welcome-section">
+                    <h1>Welcome back, <span id="user-nickname">EZ-1</span>!</h1>
+                    <p>Grow your clinical confidence, one chat at a time.</p>
+                </div>
+                
+                <div class="main-illustration">
+                    <div class="pixel-character main-patient"></div>
+                    <div class="dental-setup">
+                        <div class="dental-unit"></div>
+                        <div class="certificate"></div>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn-primary large" onclick="showScreen('case-library-screen')">Start Simulation</button>
+                    <button class="btn-secondary" onclick="showScreen('case-library-screen')">Case Library</button>
+                </div>
+                
+                <div class="progress-summary">
+                    <span>Your progress: <span id="completed-cases">3</span> cases completed</span>
+                    <div class="trophy-icon">🏆</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 케이스 라이브러리 화면 -->
+    <section id="case-library-screen" class="screen">
+        <div class="container">
+            <nav class="top-nav">
+                <div class="nav-brand">
+                    <div class="tooth-icon">🦷</div>
+                    <span>DentCharley</span>
+                </div>
+                <div class="nav-menu">
+                    <button class="nav-item active" onclick="showScreen('case-library-screen')">Case Library</button>
+                    <button class="nav-item" onclick="showScreen('dashboard-screen')">Dashboard</button>
+                    <button class="nav-item" onclick="showScreen('settings-screen')">Settings</button>
+                </div>
+                <div class="nav-search">🔍</div>
+            </nav>
+            
+            <div class="library-content">
+                <h2>Choose a Case</h2>
+                <div class="cases-grid">
+                    <div class="case-card" data-case="sensitivity-anxious">
+                        <div class="case-character">😰</div>
+                        <h3>Tooth Sensitivity (Anxious)</h3>
+                        <p>Patient: Jina Kim, 28</p>
+                        <div class="case-tags">
+                            <span class="tag difficulty">Beginner</span>
+                            <span class="tag type">Anxious</span>
+                        </div>
+                        <button class="btn-primary" onclick="startCase('sensitivity-anxious')">Start</button>
+                    </div>
+                    
+                    <div class="case-card" data-case="wisdom-calm">
+                        <div class="case-character">😌</div>
+                        <h3>Wisdom Tooth (Calm)</h3>
+                        <p>Patient: David Park, 24</p>
+                        <div class="case-tags">
+                            <span class="tag difficulty">Intermediate</span>
+                            <span class="tag type">Calm</span>
+                        </div>
+                        <button class="btn-primary" onclick="startCase('wisdom-calm')">Start</button>
+                    </div>
+                    
+                    <div class="case-card" data-case="cavity-curious">
+                        <div class="case-character">🤔</div>
+                        <h3>Cavity Treatment (Curious)</h3>
+                        <p>Patient: Sarah Lee, 35</p>
+                        <div class="case-tags">
+                            <span class="tag difficulty">Intermediate</span>
+                            <span class="tag type">Curious</span>
+                        </div>
+                        <button class="btn-primary" onclick="startCase('cavity-curious')">Start</button>
+                    </div>
+                    
+                    <div class="case-card" data-case="implant-worried">
+                        <div class="case-character">😟</div>
+                        <h3>Implant Cost (Worried)</h3>
+                        <p>Patient: Michael Kim, 45</p>
+                        <div class="case-tags">
+                            <span class="tag difficulty">Advanced</span>
+                            <span class="tag type">Worried</span>
+                        </div>
+                        <button class="btn-primary" onclick="startCase('implant-worried')">Start</button>
+                    </div>
+                    
+                    <div class="case-card" data-case="ortho-detailed">
+                        <div class="case-character">📋</div>
+                        <h3>Orthodontic Consultation (Detailed)</h3>
+                        <p>Patient: Emma Choi, 16</p>
+                        <div class="case-tags">
+                            <span class="tag difficulty">Advanced</span>
+                            <span class="tag type">Detailed</span>
+                        </div>
+                        <button class="btn-primary" onclick="startCase('ortho-detailed')">Start</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 시뮬레이션 화면 -->
+    <section id="simulation-screen" class="screen">
+        <div class="container">
+            <div class="simulation-header">
+                <h3 id="case-title">Case #02: Tooth Sensitivity</h3>
+                <p id="patient-info">Jina Kim, F, 28, anxious type</p>
+            </div>
+            
+            <div class="simulation-content">
+                <div class="patient-section">
+                    <div class="patient-character-container">
+                        <div class="pixel-character patient-character-large"></div>
+                        <div class="emotion-indicator">😰</div>
+                    </div>
+                </div>
+                
+                <div class="chat-section">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="message patient-message">
+                            <div class="message-content">
+                                It really hurts when I drink cold water...
+                            </div>
+                        </div>
+                        <div class="message patient-message">
+                            <div class="message-content">
+                                I'm worried it's getting worse.
+                            </div>
+                        </div>
+                        <div class="message user-message">
+                            <div class="message-content">
+                                I understand. Let's talk about it.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-input">
+                        <input type="text" id="message-input" placeholder="Type your message...">
+                        <button class="btn-primary" onclick="sendMessage()">Send</button>
+                    </div>
+                    
+                    <div class="suggested-questions">
+                        <button class="suggestion-btn" onclick="sendSuggestion('Can you describe the pain?')">Can you describe?</button>
+                        <button class="suggestion-btn" onclick="sendSuggestion('When did it start?')">When did it start?</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="simulation-footer">
+                <div class="progress-section">
+                    <span>Progress: <span id="progress-percentage">40</span>%</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 40%"></div>
+                    </div>
+                </div>
+                <div class="confidence-section">
+                    <span>Confidence +<span id="confidence-points">2</span></span>
+                    <div class="leaf-icon">🍃</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 평가 화면 -->
+    <section id="evaluation-screen" class="screen">
+        <div class="container">
+            <div class="evaluation-header">
+                <h2>How the Talk Went</h2>
+                <div class="overall-score">
+                    <div class="score-main">Overall Score <span id="overall-score">4.3</span>/5</div>
+                    <div class="score-change">+<span id="score-change">66</span></div>
+                </div>
+                <div class="rapport-index">
+                    <span>Rapport Index <span id="rapport-percentage">88</span>%</span>
+                </div>
+            </div>
+            
+            <div class="evaluation-content">
+                <div class="evaluation-details">
+                    <div class="evaluation-section">
+                        <h4>Initiating the Session</h4>
+                        <div class="score">Score: 4/5</div>
+                        <div class="checklist">
+                            <div class="check-item completed">✓ Friendly greeting</div>
+                            <div class="check-item completed">✓ Set agenda</div>
+                        </div>
+                    </div>
+                    
+                    <div class="evaluation-section">
+                        <h4>Gathering Information</h4>
+                        <div class="checklist">
+                            <div class="check-item completed">✓ Asked open-ended questions</div>
+                            <div class="check-item completed">✓ Set agenda questions</div>
+                        </div>
+                    </div>
+                    
+                    <div class="evaluation-section">
+                        <h4>Physical Examination</h4>
+                        <div class="checklist">
+                            <div class="check-item completed">✓ Asked open questions</div>
+                            <div class="check-item warning">⚠ Active to explain steps</div>
+                        </div>
+                    </div>
+                    
+                    <div class="evaluation-section">
+                        <h4>Explanation & Planning</h4>
+                        <div class="checklist">
+                            <div class="check-item completed">✓ Clear options</div>
+                            <div class="check-item warning">⚠ Checked understanding</div>
+                        </div>
+                    </div>
+                    
+                    <div class="evaluation-section">
+                        <h4>Closing the Structure</h4>
+                        <div class="score">Score: 4/5</div>
+                        <div class="checklist">
+                            <div class="check-item completed">✓ Confirmed next steps</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="skills-chart">
+                    <div class="skill-item">
+                        <div class="skill-circle" data-skill="rapport">
+                            <span class="skill-percentage">88%</span>
+                        </div>
+                        <div class="skill-label">Rapport Building</div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-circle" data-skill="empathy">
+                            <span class="skill-percentage">75%</span>
+                        </div>
+                        <div class="skill-label">Empathy</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="reflection-section">
+                <h4>Reflection Journal</h4>
+                <textarea id="reflection-text" placeholder="What would you do differently next time..."></textarea>
+                <div class="reflection-actions">
+                    <button class="btn-secondary" onclick="saveReflection()">Save Reflection</button>
+                    <span class="save-status" id="save-status"></span>
+                </div>
+            </div>
+            
+            <div class="evaluation-actions">
+                <button class="btn-secondary" onclick="replayCase()">Replay Case</button>
+                <button class="btn-primary" onclick="goToDashboard()">Go to Dashboard</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 대시보드 화면 -->
+    <section id="dashboard-screen" class="screen">
+        <div class="container">
+            <nav class="top-nav">
+                <div class="nav-brand">
+                    <div class="tooth-icon">🦷</div>
+                    <span>DentCharley</span>
+                </div>
+                <div class="nav-menu">
+                    <button class="nav-item" onclick="showScreen('case-library-screen')">Case Library</button>
+                    <button class="nav-item active" onclick="showScreen('dashboard-screen')">Dashboard</button>
+                    <button class="nav-item" onclick="showScreen('settings-screen')">Settings</button>
+                </div>
+                <div class="nav-search">🔍</div>
+            </nav>
+            
+            <div class="dashboard-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-value" id="cases-completed">12</div>
+                        <div class="stat-label">Cases Completed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⭐</div>
+                        <div class="stat-value" id="feedback-score">4.2</div>
+                        <div class="stat-label">Feedback Score</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-value" id="confidence-growth">+15%</div>
+                        <div class="stat-label">Confidence Growth</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-value" id="total-time">3h 45m</div>
+                        <div class="stat-label">Total Chat Time</div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-grid">
+                    <div class="chart-section">
+                        <h3>Weekly Activity</h3>
+                        <div class="activity-chart" id="activity-chart">
+                            <!-- 차트는 JavaScript로 생성 -->
+                        </div>
+                    </div>
+                    
+                    <div class="skills-section">
+                        <h3>Skill Growth</h3>
+                        <div class="skills-radar" id="skills-radar">
+                            <!-- 레이더 차트는 JavaScript로 생성 -->
+                        </div>
+                    </div>
+                    
+                    <div class="case-map-section">
+                        <h3>Case Map</h3>
+                        <div class="case-map" id="case-map">
+                            <!-- 케이스 맵은 JavaScript로 생성 -->
+                        </div>
+                    </div>
+                    
+                    <div class="feedback-section">
+                        <h3>Recent Feedback</h3>
+                        <div class="feedback-list" id="feedback-list">
+                            <div class="feedback-item">
+                                <div class="feedback-text">Empathy improved in Case #10</div>
+                            </div>
+                            <div class="feedback-item">
+                                <div class="feedback-text">Remember to use fewer medical terms</div>
+                            </div>
+                            <div class="feedback-item">
+                                <div class="feedback-text">Good job explaining treatment options</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="journal-section">
+                        <h3>Reflection Journal</h3>
+                        <div class="journal-list" id="journal-list">
+                            <div class="journal-item">
+                                <div class="journal-date">Nov 20</div>
+                                <div class="journal-text">Felt confident explaining X-rays 😊</div>
+                            </div>
+                            <div class="journal-item">
+                                <div class="journal-date">Nov 18</div>
+                                <div class="journal-text">Patient interaction was tough 😔</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 설정 화면 -->
+    <section id="settings-screen" class="screen">
+        <div class="container">
+            <nav class="top-nav">
+                <div class="nav-brand">
+                    <div class="tooth-icon">🦷</div>
+                    <span>DentCharley</span>
+                </div>
+                <div class="nav-menu">
+                    <button class="nav-item" onclick="showScreen('case-library-screen')">Case Library</button>
+                    <button class="nav-item" onclick="showScreen('dashboard-screen')">Dashboard</button>
+                    <button class="nav-item active" onclick="showScreen('settings-screen')">Settings</button>
+                </div>
+                <div class="nav-search">🔍</div>
+            </nav>
+            
+            <div class="settings-content">
+                <h2>Settings</h2>
+                <div class="settings-section">
+                    <h3>Profile</h3>
+                    <div class="setting-item">
+                        <label>Nickname</label>
+                        <input type="text" id="settings-nickname" value="EZ-1">
+                    </div>
+                    <div class="setting-item">
+                        <label>Year in dental school</label>
+                        <select id="settings-year">
+                            <option value="3rd">3rd</option>
+                            <option value="4th">4th</option>
+                            <option value="graduate">Graduate</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>Preferences</h3>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="dark-mode" checked>
+                            Dark mode
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="sound-effects" checked>
+                            Sound effects
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>Data</h3>
+                    <button class="btn-secondary" onclick="exportData()">Export Data</button>
+                    <button class="btn-secondary" onclick="resetData()">Reset All Data</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="script.js"></script>
+</body>
+</html>
