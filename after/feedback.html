@@ -408,6 +408,52 @@
         </section>
     </main>
     <script>
+        // Render last conversation saved from simulation (if any)
+        (function renderSavedConversation(){
+            try {
+                const raw = localStorage.getItem('last_conversation');
+                if (!raw) return;
+                const data = JSON.parse(raw);
+                const wrapper = document.querySelector('.history-wrapper');
+                if (!wrapper) return;
+                const imgMap = {
+                    'lee-jiwon': '이지원.png',
+                    'jo-minseon': '조민선.png',
+                    'oh-owan': '오완.png'
+                };
+                // create a block for the saved conversation
+                const convBlock = document.createElement('div');
+                convBlock.className = 'conversation-entry';
+                data.items.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = 'chat-row ' + (item.role === 'user' ? 'me' : 'patient');
+                    if (item.role === 'patient') {
+                        const img = document.createElement('img');
+                        img.className = 'avatar';
+                        const imgFile = imgMap[data.caseId] || '';
+                        if (imgFile) img.src = `images/${imgFile}`;
+                        row.appendChild(img);
+                        const bubble = document.createElement('div');
+                        bubble.className = 'chat-bubble';
+                        bubble.textContent = item.text;
+                        row.appendChild(bubble);
+                    } else {
+                        const img = document.createElement('img');
+                        img.className = 'avatar';
+                        row.appendChild(img);
+                        const bubble = document.createElement('div');
+                        bubble.className = 'chat-bubble';
+                        bubble.textContent = item.text;
+                        row.appendChild(bubble);
+                    }
+                    convBlock.appendChild(row);
+                });
+                // insert at top of wrapper
+                wrapper.insertBefore(convBlock, wrapper.firstChild);
+            } catch (e) {
+                console.warn('no saved conversation', e);
+            }
+        })();
         document.getElementById('retry-btn')?.addEventListener('click', () => {
             location.href = 'simulation.html';
         });

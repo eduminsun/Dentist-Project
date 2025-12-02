@@ -38,7 +38,8 @@
         }
 
         .app-shell.sidebar-hidden {
-            grid-template-columns: 0 1fr 80px;
+            /* keep a small sliver visible (64px) so the open affordance doesn't overlap chat */
+            grid-template-columns: 64px 1fr 80px;
         }
 
         /* Sidebar */
@@ -54,7 +55,15 @@
         }
 
         .app-shell.sidebar-hidden .sidebar {
-            transform: translateX(-100%);
+            /* shift left but leave a sliver of the sidebar visible */
+            transform: translateX(-calc(100% - 64px));
+        }
+
+        /* When sidebar is 'closed' we keep the container visible as a sliver but hide its inner contents */
+        .app-shell.sidebar-hidden .sidebar > * {
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
         }
 
         .sidebar-header {
@@ -191,6 +200,14 @@
             color: var(--text-main);
         }
 
+        .avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            background-color: rgba(255,255,255,0.06);
+            flex-shrink: 0;
+        }
+
         /* Input bar */
         .input-bar {
             padding: 16px 28px;
@@ -215,16 +232,19 @@
             color: rgba(255, 255, 255, 0.4);
         }
 
-        .mic-btn {
+        .send-btn {
             width: 52px;
             height: 52px;
-            border-radius: 14px;
+            border-radius: 12px;
             background: var(--accent);
             border: none;
             color: #041a24;
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: 700;
             cursor: pointer;
+            display: inline-grid;
+            place-items: center;
+            padding: 0;
         }
 
         /* Right spacer */
@@ -260,6 +280,49 @@
                 max-width: 100%;
             }
         }
+
+    /* Floating open button styles */
+    #open-sidebar-btn {
+        position: fixed;
+        left: 18px;
+        top: 18px;
+        z-index: 60;
+        display: none;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: none;
+        background: rgba(0,0,0,0.6);
+        color: white;
+        font-weight: 600;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+        touch-action: manipulation;
+    }
+
+    @media (max-width: 480px) {
+        /* move the open button slightly down to avoid phone notches and increase hit area */
+        #open-sidebar-btn {
+            left: 12px;
+            top: 44px;
+            padding: 14px 16px;
+            font-size: 1rem;
+        }
+
+        /* tighten layout for small screens */
+        .input-bar {
+            padding: 12px 14px;
+        }
+
+        .input-field {
+            padding: 12px 10px;
+            font-size: 0.95rem;
+        }
+
+        .send-btn {
+            width: 48px;
+            height: 48px;
+            padding: 0;
+        }
+    }
     </style>
 </head>
 <body>
@@ -270,14 +333,13 @@
                 <button class="toggle-btn" id="toggle-btn">닫기</button>
             </div>
             <div class="ccg-steps">
-                <div class="ccg-step">1. 인사 및 이름 확인</div>
-                <div class="ccg-step">2. 대화 목적 안내</div>
-                <div class="ccg-step active">3. 방문 이유 확인</div>
-                <div class="ccg-step">4. 정보 수집 및 공감</div>
-                <div class="ccg-step">5. 치료 계획 설명</div>
-                <div class="ccg-step">6. 다음 단계 합의</div>
+                <div class="ccg-step">1. 인사 및 환자 확인</div>
+                <div class="ccg-step">2. 방문 이유 확인</div>
+                <div class="ccg-step">3. 정보 수집 및 공감</div>
+                <div class="ccg-step">4. 치료 계획 설명</div>
+                <div class="ccg-step">5. 진료 마무리</div>
             </div>
-            <p class="sidebar-tip">현재 단계에 집중하면서 환자의 감정과 필요를 함께 확인해 보세요.</p>
+            <p class="sidebar-tip">각 단계에 집중하면서 환자의 감정과 필요를 함께 확인해 보세요.</p>
         </aside>
 
         <section class="conversation-area">
@@ -295,24 +357,51 @@
             </div>
 
             <div class="input-bar">
-                <input type="text" class="input-field" id="message-input" placeholder="메시지를 입력하거나, 마이크 버튼으로 말해주세요.">
-                <button class="send-btn" id="send-btn">전송</button>
-                <button class="mic-btn">🎙</button>
+                    <input type="text" class="input-field" id="message-input" placeholder="메시지를 입력하세요.">
+                    <button class="send-btn" id="send-btn" aria-label="전송" title="전송">
+                        <!-- paper-plane icon -->
+                        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" style="display:block;">
+                            <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+                        </svg>
+                    </button>
             </div>
         </section>
 
         <div class="spacer"></div>
     </div>
 
+    <!-- floating open button shown when sidebar is hidden -->
+    <button id="open-sidebar-btn">열기</button>
+
     <script>
         const toggleBtn = document.getElementById('toggle-btn');
         const appShell = document.getElementById('app-shell');
         const sidebar = document.getElementById('sidebar');
+        const openSidebarBtn = document.getElementById('open-sidebar-btn');
+
+        function updateSidebarUI() {
+            const hidden = appShell.classList.contains('sidebar-hidden');
+            // toggleBtn text inside sidebar
+            if (toggleBtn) toggleBtn.textContent = hidden ? '열기' : '닫기';
+            // floating button shown when hidden
+            if (openSidebarBtn) openSidebarBtn.style.display = hidden ? 'block' : 'none';
+        }
 
         toggleBtn.addEventListener('click', () => {
             const hidden = appShell.classList.toggle('sidebar-hidden');
-            toggleBtn.textContent = hidden ? '열기' : '닫기';
+            updateSidebarUI();
         });
+
+        // open button handler
+        if (openSidebarBtn) {
+            openSidebarBtn.addEventListener('click', () => {
+                appShell.classList.remove('sidebar-hidden');
+                updateSidebarUI();
+            });
+        }
+
+        // initial UI sync
+        updateSidebarUI();
 
         // Simple timer mock
         const timerElement = document.getElementById('timer');
@@ -327,6 +416,11 @@
         const endBtn = document.getElementById('end-btn');
         if (endBtn) {
             endBtn.addEventListener('click', () => {
+                try {
+                    localStorage.setItem('last_conversation', JSON.stringify({caseId: selected, items: conversationHistory}));
+                } catch (e) {
+                    console.warn('failed to save conversation', e);
+                }
                 window.location.href = 'feedback.html';
             });
         }
@@ -340,24 +434,23 @@
         const cases = {
             'lee-jiwon': {
                 title: '시나리오: 이지원',
-                info: 'F · 22 · 불안형',
+                info: 'M · 25 · 불안형',
                 messages: [
                     {role: 'patient', text: '안녕하세요, 의사 선생님. 요즘 입 안이 쓰라려요.'},
-                    {role: 'patient', text: '한 두 달 전부터 찬물 마실 때 아파요.'}
                 ]
             },
             'jo-minseon': {
                 title: '시나리오: 조민선',
-                info: 'F · 24 · 민감형',
+                info: 'F · 30 · 민감형',
                 messages: [
-                    {role: 'patient', text: '치아 민감도가 심해서 따끔거려요.'}
+                    {role: 'patient', text: '사랑니 부위가 부은 것 같고 씹을 때 아파요.'}
                 ]
             },
             'oh-owan': {
                 title: '시나리오: 오완',
-                info: 'M · 33 · 상담형',
+                info: 'M · 8 · 상담형',
                 messages: [
-                    {role: 'patient', text: '임플란트 비용 때문에 문의드려요.'}
+                    {role: 'patient', text: '아이가 발음을 잘 못하고 혀가 위로 안 올라가요.'}
                 ]
             }
         };
@@ -367,16 +460,27 @@
         document.getElementById('case-title').textContent = meta.title;
         document.getElementById('patient-info').textContent = meta.info;
 
-        const chatMessages = document.getElementById('chat-messages');
+    const chatMessages = document.getElementById('chat-messages');
+    const conversationHistory = [];
         function appendMessage(role, text) {
             const wrapper = document.createElement('div');
             wrapper.className = `message ${role === 'user' ? 'user' : 'patient'}`;
             if (role === 'patient') {
-                wrapper.innerHTML = `<img class="avatar" src="" alt="환자 아바타"><div class="bubble">${text}</div>`;
+                // choose image by selected case; fallback to generic
+                const imgMap = {
+                    'lee-jiwon': '이지원.png',
+                    'jo-minseon': '조민선.png',
+                    'oh-owan': '오완 보호자.png'
+                };
+                const imgFile = imgMap[selected] || 'patient.png';
+                const imgSrc = `images/${imgFile}`;
+                wrapper.innerHTML = `<div class="avatar" style="background-image:url('${imgSrc}');background-size:cover;background-position:center;border-radius:12px;width:46px;height:46px;"></div><div class="bubble">${text}</div>`;
             } else {
                 wrapper.innerHTML = `<div class="bubble">${text}</div>`;
             }
             chatMessages.appendChild(wrapper);
+            // record message
+            conversationHistory.push({role, text, ts: Date.now()});
             // scroll to bottom
             chatMessages.parentElement.scrollTop = chatMessages.parentElement.scrollHeight;
         }
