@@ -23,3 +23,13 @@ Notes
 Troubleshooting
 - If pages don't appear, check Actions -> Workflows for failures and review logs.
 - Make sure `images/` and other assets are within `after/` so they're published.
+
+## Vercel
+
+This repository includes a `vercel.json` at the repo root that routes requests so Vercel serves files from the `after/` folder.
+
+To deploy on Vercel:
+- Connect your GitHub repo in Vercel.
+- Vercel will detect the `vercel.json` and serve the `after/` static files automatically.
+
+If you'd rather set the Root Directory during import, set it to `after` — both approaches work.
