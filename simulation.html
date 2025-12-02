@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>덴트찰리 - 시뮬레이션</title>
+    <style>
+        :root {
+            --bg-main: #222831;
+            --bg-sidebar: #2f3c48;
+            --bg-chat: #1c222a;
+            --patient-bubble: #5c6b73;
+            --user-bubble: #1dd1a1;
+            --text-main: #f5f9ff;
+            --text-muted: #c4cbd8;
+            --accent: #00a3ff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-shell {
+            display: grid;
+            grid-template-columns: 320px 1fr 80px;
+            height: 100vh;
+            transition: grid-template-columns 0.3s ease;
+        }
+
+        .app-shell.sidebar-hidden {
+            /* keep a small sliver visible (64px) so the open affordance doesn't overlap chat */
+            grid-template-columns: 64px 1fr 80px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--bg-sidebar);
+            padding: 28px 24px;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .app-shell.sidebar-hidden .sidebar {
+            /* shift left but leave a sliver of the sidebar visible */
+            transform: translateX(-calc(100% - 64px));
+        }
+
+        /* When sidebar is 'closed' we keep the container visible as a sliver but hide its inner contents */
+        .app-shell.sidebar-hidden .sidebar > * {
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.1rem;
+        }
+
+        .toggle-btn,
+        .end-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: var(--text-main);
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .toggle-btn:hover,
+        .end-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .ccg-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .ccg-step {
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.15);
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .ccg-step.active {
+            background: rgba(0, 163, 255, 0.15);
+            color: var(--text-main);
+            border-left: 3px solid var(--accent);
+        }
+
+        .ccg-step.active::before {
+            content: "▶ ";
+            color: var(--accent);
+        }
+
+        /* Chat area */
+        .conversation-area {
+            background: var(--bg-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .top-bar {
+            padding: 20px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .scenario-info span {
+            display: block;
+            color: var(--text-muted);
+        }
+
+        .timer {
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+        }
+
+        .chat-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .chat-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 999px;
+        }
+
+        .message {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.08);
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .bubble {
+            max-width: 70%;
+            padding: 14px 18px;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .message.patient .bubble {
+            background: var(--patient-bubble);
+            color: #f0f4ff;
+        }
+
+        .message.user .bubble {
+            background: rgba(29, 209, 161, 0.15);
+            border: 1px solid rgba(29, 209, 161, 0.4);
+            color: var(--text-main);
+        }
+
+        .avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            background-color: rgba(255,255,255,0.06);
+            flex-shrink: 0;
+        }
+
+        /* Input bar */
+        .input-bar {
+            padding: 16px 28px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            background: var(--bg-chat);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .input-field {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 14px 16px;
+            color: var(--text-main);
+            font-size: 1rem;
+        }
+
+        .input-field::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .send-btn {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            background: var(--accent);
+            border: none;
+            color: #041a24;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-grid;
+            place-items: center;
+            padding: 0;
+        }
+
+        /* Right spacer */
+        .spacer {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        @media (max-width: 1024px) {
+            .app-shell {
+                grid-template-columns: 280px 1fr;
+            }
+
+            .spacer {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-shell {
+                grid-template-columns: 0 1fr;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: 280px;
+                z-index: 10;
+            }
+
+            .chat-scroll .message .bubble {
+                max-width: 100%;
+            }
+        }
+
+    /* Floating open button styles */
+    #open-sidebar-btn {
+        position: fixed;
+        left: 18px;
+        top: 18px;
+        z-index: 60;
+        display: none;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: none;
+        background: rgba(0,0,0,0.6);
+        color: white;
+        font-weight: 600;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+        touch-action: manipulation;
+    }
+
+    @media (max-width: 480px) {
+        /* move the open button slightly down to avoid phone notches and increase hit area */
+        #open-sidebar-btn {
+            left: 12px;
+            top: 44px;
+            padding: 14px 16px;
+            font-size: 1rem;
+        }
+
+        /* tighten layout for small screens */
+        .input-bar {
+            padding: 12px 14px;
+        }
+
+        .input-field {
+            padding: 12px 10px;
+            font-size: 0.95rem;
+        }
+
+        .send-btn {
+            width: 48px;
+            height: 48px;
+            padding: 0;
+        }
+    }
+    </style>
+</head>
+<body>
+    <div class="app-shell" id="app-shell">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>대화 흐름 가이드 (CCG)</h2>
+                <button class="toggle-btn" id="toggle-btn">닫기</button>
+            </div>
+            <div class="ccg-steps">
+                <div class="ccg-step">1. 인사 및 환자 확인</div>
+                <div class="ccg-step">2. 방문 이유 확인</div>
+                <div class="ccg-step">3. 정보 수집 및 공감</div>
+                <div class="ccg-step">4. 치료 계획 설명</div>
+                <div class="ccg-step">5. 진료 마무리</div>
+            </div>
+            <p class="sidebar-tip">각 단계에 집중하면서 환자의 감정과 필요를 함께 확인해 보세요.</p>
+        </aside>
+
+        <section class="conversation-area">
+            <div class="top-bar">
+                <div class="scenario-info">
+                    <strong id="case-title">시나리오</strong>
+                    <span id="patient-info">환자 정보</span>
+                </div>
+                <div class="timer" id="timer">00:00</div>
+                <button class="end-btn" id="end-btn">시뮬레이션 종료</button>
+            </div>
+
+            <div class="chat-scroll" id="chat-scroll">
+                <div id="chat-messages"></div>
+            </div>
+
+            <div class="input-bar">
+                    <input type="text" class="input-field" id="message-input" placeholder="메시지를 입력하세요.">
+                    <button class="send-btn" id="send-btn" aria-label="전송" title="전송">
+                        <!-- paper-plane icon -->
+                        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" style="display:block;">
+                            <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+                        </svg>
+                    </button>
+            </div>
+        </section>
+
+        <div class="spacer"></div>
+    </div>
+
+    <!-- floating open button shown when sidebar is hidden -->
+    <button id="open-sidebar-btn">열기</button>
+
+    <script>
+        const toggleBtn = document.getElementById('toggle-btn');
+        const appShell = document.getElementById('app-shell');
+        const sidebar = document.getElementById('sidebar');
+        const openSidebarBtn = document.getElementById('open-sidebar-btn');
+
+        function updateSidebarUI() {
+            const hidden = appShell.classList.contains('sidebar-hidden');
+            // toggleBtn text inside sidebar
+            if (toggleBtn) toggleBtn.textContent = hidden ? '열기' : '닫기';
+            // floating button shown when hidden
+            if (openSidebarBtn) openSidebarBtn.style.display = hidden ? 'block' : 'none';
+        }
+
+        toggleBtn.addEventListener('click', () => {
+            const hidden = appShell.classList.toggle('sidebar-hidden');
+            updateSidebarUI();
+        });
+
+        // open button handler
+        if (openSidebarBtn) {
+            openSidebarBtn.addEventListener('click', () => {
+                appShell.classList.remove('sidebar-hidden');
+                updateSidebarUI();
+            });
+        }
+
+        // initial UI sync
+        updateSidebarUI();
+
+        // Simple timer mock
+        const timerElement = document.getElementById('timer');
+        let seconds = 0;
+        setInterval(() => {
+            seconds += 1;
+            const minutes = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const secs = String(seconds % 60).padStart(2, '0');
+            timerElement.textContent = `${minutes}:${secs}`;
+        }, 1000);
+        // End simulation -> feedback
+        const endBtn = document.getElementById('end-btn');
+        if (endBtn) {
+            endBtn.addEventListener('click', () => {
+                try {
+                    localStorage.setItem('last_conversation', JSON.stringify({caseId: selected, items: conversationHistory}));
+                } catch (e) {
+                    console.warn('failed to save conversation', e);
+                }
+                window.location.href = 'feedback.html';
+            });
+        }
+
+        // Parse ?case and render patient header + initial messages
+        function getQueryParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
+        const cases = {
+            'lee-jiwon': {
+                title: '시나리오: 이지원',
+                info: 'M · 25 · 불안형',
+                messages: [
+                    {role: 'patient', text: '안녕하세요, 의사 선생님. 요즘 입 안이 쓰라려요.'},
+                ]
+            },
+            'jo-minseon': {
+                title: '시나리오: 조민선',
+                info: 'F · 30 · 민감형',
+                messages: [
+                    {role: 'patient', text: '사랑니 부위가 부은 것 같고 씹을 때 아파요.'}
+                ]
+            },
+            'oh-owan': {
+                title: '시나리오: 오완',
+                info: 'M · 8 · 상담형',
+                messages: [
+                    {role: 'patient', text: '아이가 발음을 잘 못하고 혀가 위로 안 올라가요.'}
+                ]
+            }
+        };
+
+        const selected = getQueryParam('case') || 'lee-jiwon';
+        const meta = cases[selected] || cases['lee-jiwon'];
+        document.getElementById('case-title').textContent = meta.title;
+        document.getElementById('patient-info').textContent = meta.info;
+
+    const chatMessages = document.getElementById('chat-messages');
+    const conversationHistory = [];
+        function appendMessage(role, text) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `message ${role === 'user' ? 'user' : 'patient'}`;
+            if (role === 'patient') {
+                // choose image by selected case; fallback to generic
+                const imgMap = {
+                    'lee-jiwon': '이지원.png',
+                    'jo-minseon': '조민선.png',
+                    'oh-owan': '오완 보호자.png'
+                };
+                const imgFile = imgMap[selected] || 'patient.png';
+                const imgSrc = `images/${imgFile}`;
+                wrapper.innerHTML = `<div class="avatar" style="background-image:url('${imgSrc}');background-size:cover;background-position:center;border-radius:12px;width:46px;height:46px;"></div><div class="bubble">${text}</div>`;
+            } else {
+                wrapper.innerHTML = `<div class="bubble">${text}</div>`;
+            }
+            chatMessages.appendChild(wrapper);
+            // record message
+            conversationHistory.push({role, text, ts: Date.now()});
+            // scroll to bottom
+            chatMessages.parentElement.scrollTop = chatMessages.parentElement.scrollHeight;
+        }
+
+        // render initial messages
+        meta.messages.forEach(m => appendMessage(m.role, m.text));
+
+        // enable send input
+        const inputField = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        function sendMessage() {
+            const text = inputField.value.trim();
+            if (!text) return;
+            appendMessage('user', text);
+            inputField.value = '';
+            // mock patient reply (simple echo with delay)
+            setTimeout(() => {
+                appendMessage('patient', '환자: ' + text + ' (자동 응답)');
+            }, 700);
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        inputField.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
+
