@@ -1,23 +1,19 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GENAI_API_KEY);
-
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+module.exports = async (req, res) => {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
     const { conversationHistory, caseId } = req.body;
 
     if (!conversationHistory || conversationHistory.length === 0) {
-      return res.status(400).json({ error: "No conversation history" });
+      return res.status(400).json({ error: 'No conversation history' });
     }
 
-    // 대화 내용을 정리 (사용자의 발언만 평가)
-    let conversationText = "";
+    // 대화 내용을 정리 (의사의 발언만 평가)
+    let conversationText = '';
     conversationHistory.forEach((msg, idx) => {
-      if (msg.role === "user") {
+      if (msg.role === 'user') {
         conversationText += `[${idx}] 의사: ${msg.text}\n`;
       }
     });
@@ -36,12 +32,18 @@ ${conversationText}
 잘 이루어진 단계와 개선 필요 단계를 JSON으로 응답:
 {"feedbacks": [{"stage": "5단계 이름", "done": true/false, "text": "한 줄 피드백"}]}`;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const apiKey = process.env.GENAI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GENAI_API_KEY not configured' });
+    }
+
+    // Google Generative AI REST API direct call
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
     
-    const response = await model.generateContent({
+    const requestBody = {
       contents: [
         {
-          role: "user",
+          role: 'user',
           parts: [{ text: prompt }]
         }
       ],
@@ -49,9 +51,36 @@ ${conversationText}
         temperature: 0.6,
         maxOutputTokens: 180,
       }
+    };
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
     });
 
-    const responseText = response.candidates[0].content.parts[0].text;
+    if (!response.ok) {
+      console.error(`Feedback API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('Error response:', errorText);
+      return res.status(response.status).json({ error: 'LLM API error', detail: errorText });
+    }
+
+    const data = await response.json();
+
+    // 응답에서 텍스트 추출
+    let responseText = '';
+    if (data?.candidates && data.candidates.length > 0) {
+      const candidate = data.candidates[0];
+      if (candidate?.content?.parts && candidate.content.parts.length > 0) {
+        responseText = candidate.content.parts[0].text || '';
+      }
+    }
+
+    if (!responseText) {
+      console.warn('No response text from LLM');
+      return res.status(200).json({ feedbacks: [] });
+    }
 
     // JSON 파싱
     let feedbackData;
@@ -63,14 +92,14 @@ ${conversationText}
       if (jsonMatch) {
         feedbackData = JSON.parse(jsonMatch[0]);
       } else {
-        console.error("Failed to parse feedback response:", responseText);
+        console.error('Failed to parse feedback response:', responseText);
         return res.status(200).json({ feedbacks: [] });
       }
     }
 
     return res.status(200).json(feedbackData);
   } catch (error) {
-    console.error("Feedback error:", error);
-    return res.status(200).json({ feedbacks: [] });
+    console.error('Feedback error:', error);
+    return res.status(500).json({ error: 'server error', detail: error.message });
   }
-}
+};

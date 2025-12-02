@@ -1,7 +1,6 @@
 // Vercel Serverless function to proxy requests to Google Generative AI (Gemini) REST API
 // Expects environment variable: GENAI_API_KEY
 
-const fetch = require('node-fetch');
 const crypto = require('crypto');
 
 module.exports = async (req, res) => {
@@ -40,86 +39,70 @@ module.exports = async (req, res) => {
     const prompt = `${systemPrompt}\n${historyText}\n의사: ${userMessage}\n환자:`;
 
     // Call Google Generative API (Generative Language) - text generation
-    // This example uses the text-bison-001 model endpoint
     const apiKey = process.env.GENAI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'GENAI_API_KEY not configured' });
-
-  // Upstash caching disabled for now. To re-enable, uncomment the block below
-  // and set UPSTASH_REST_URL and UPSTASH_REST_TOKEN in your environment.
-  //
-  // const upstashUrl = process.env.UPSTASH_REST_URL;
-  // const upstashToken = process.env.UPSTASH_REST_TOKEN;
-  // if (upstashUrl && upstashToken) {
-  //   try {
-  //     const getUrl = `${upstashUrl}/get/${cacheKey}`;
-  //     const getResp = await fetch(getUrl, { headers: { Authorization: `Bearer ${upstashToken}` } });
-  //     if (getResp.ok) {
-  //       const getJson = await getResp.json();
-  //       if (getJson?.result) {
-  //         return res.json({ text: getJson.result, cached: true });
-  //       }
-  //     }
-  //   } catch (e) {
-  //     console.warn('upstash get failed', e.message);
-  //   }
-  // }
-
-    // Use official @google/genai client if available (preferred)
-    let reply = '';
-    try {
-      // Lazy-require so local dev without package doesn't crash immediately
-      const { GoogleGenAI } = require('@google/genai');
-      const ai = new GoogleGenAI({ apiKey });
-      
-      // Use the correct generateContent API
-      const resp = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: prompt }]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.6,
-          maxOutputTokens: 256
-        }
-      });
-      
-      // Extract text from response
-      // Response shape: { candidates: [{ content: { parts: [{ text: '...' }] } }] }
-      if (resp?.candidates && resp.candidates.length > 0) {
-        const candidate = resp.candidates[0];
-        if (candidate?.content?.parts && candidate.content.parts.length > 0) {
-          reply = candidate.content.parts[0].text || '';
-        }
-      }
-      
-      // Fallback: if response structure is different, try common patterns
-      if (!reply && resp?.text) reply = resp.text;
-      if (!reply && resp?.content) reply = resp.content.toString();
-      
-    } catch (e) {
-      console.error('genai client error', e);
-      return res.status(502).json({ error: 'LLM provider error', detail: e.message });
+    if (!apiKey) {
+      console.error('GENAI_API_KEY not configured');
+      return res.status(500).json({ error: 'GENAI_API_KEY not configured' });
     }
 
-  // Upstash store disabled. Re-enable by uncommenting and ensuring
-  // UPSTASH_REST_URL and UPSTASH_REST_TOKEN are set in environment.
-  // if (upstashUrl && upstashToken && reply) {
-  //   try {
-  //     const setUrl = `${upstashUrl}/set/${cacheKey}/${encodeURIComponent(reply)}`;
-  //     await fetch(setUrl, { method: 'POST', headers: { Authorization: `Bearer ${upstashToken}` } });
-  //     const ttlUrl = `${upstashUrl}/expire/${cacheKey}/3600`;
-  //     await fetch(ttlUrl, { method: 'POST', headers: { Authorization: `Bearer ${upstashToken}` } });
-  //   } catch (e) {
-  //     console.warn('upstash set failed', e.message);
-  //   }
-  // }
-
+    // Google Generative AI REST API direct call (using global fetch available in Node.js 18+)
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    
+    const requestBody = {
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: prompt }]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.6,
+        maxOutputTokens: 256
+      }
+    };
+    
+    console.log(`[generate.js] Calling Google API for case: ${caseId}`);
+    
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
+    });
+    
+    console.log(`[generate.js] API response status: ${resp.status}`);
+    
+    if (!resp.ok) {
+      console.error(`API error: ${resp.status} ${resp.statusText}`);
+      const errorText = await resp.text();
+      console.error('Error response:', errorText);
+      return res.status(resp.status).json({ error: 'LLM API error', detail: errorText });
+    }
+    
+    const data = await resp.json();
+    console.log('[generate.js] API response received, parsing...');
+    
+    // Extract text from response
+    // Response shape: { candidates: [{ content: { parts: [{ text: '...' }] } }] }
+    let reply = '';
+    if (data?.candidates && data.candidates.length > 0) {
+      const candidate = data.candidates[0];
+      if (candidate?.content?.parts && candidate.content.parts.length > 0) {
+        reply = candidate.content.parts[0].text || '';
+      }
+    }
+    
+    if (!reply) {
+      console.warn('No reply text extracted from LLM response');
+      console.warn('Full response:', JSON.stringify(data));
+      return res.status(500).json({ error: 'No response from LLM', detail: JSON.stringify(data) });
+    }
+    
+    console.log(`[generate.js] Successfully generated reply: ${reply.substring(0, 50)}...`);
     return res.json({ text: reply, cached: false });
+    
   } catch (err) {
-    console.error('server error', err);
+    console.error('server error', err.message);
+    console.error('Full error:', err);
     return res.status(500).json({ error: 'server error', detail: err.message });
   }
 };
