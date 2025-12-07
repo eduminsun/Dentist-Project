@@ -1,31 +1,112 @@
+// Feedback API with Redis caching (permanent storage)
+
+const feedbackCache = new Map();
+
+// Redis 설정
+const UPSTASH_REST_URL = process.env.UPSTASH_REST_URL;
+const UPSTASH_REST_TOKEN = process.env.UPSTASH_REST_TOKEN;
+
+function getCacheKey(doctorStatements) {
+  const normalized = (doctorStatements || '').trim().replace(/\s+/g, ' ');
+  return `feedback:${normalized.substring(0, 100)}`;
+}
+
+// Redis에서 캐시 조회
+async function getFromRedis(key) {
+  if (!UPSTASH_REST_URL || !UPSTASH_REST_TOKEN) return null;
+  
+  try {
+    const response = await fetch(`${UPSTASH_REST_URL}/get/${encodeURIComponent(key)}`, {
+      headers: { 'Authorization': `Bearer ${UPSTASH_REST_TOKEN}` }
+    });
+    
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (data.result) {
+      console.log('[REDIS_HIT] Found cached feedback');
+      return JSON.parse(data.result);
+    }
+    return null;
+  } catch (err) {
+    console.error('[REDIS_GET_ERROR]', err.message);
+    return null;
+  }
+}
+
+// Redis에 캐시 저장 (영구 저장)
+async function setToRedis(key, value) {
+  if (!UPSTASH_REST_URL || !UPSTASH_REST_TOKEN) return;
+  
+  try {
+    await fetch(`${UPSTASH_REST_URL}/set/${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${UPSTASH_REST_TOKEN}` },
+      body: JSON.stringify({
+        value: JSON.stringify(value),
+        ex: -1 // 영구 저장
+      })
+    });
+    console.log('[REDIS_SET] Cached feedback (permanent)');
+  } catch (err) {
+    console.error('[REDIS_SET_ERROR]', err.message);
+  }
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { conversationHistory, caseId } = req.body;
+    const { conversationHistory } = req.body;
 
     if (!conversationHistory || conversationHistory.length === 0) {
       return res.status(400).json({ error: 'No conversation history' });
     }
 
-    // 대화 내용을 정리 - 최근 10개 의사 발언만 추출 (용량 줄이기)
-    let userMessages = [];
-    conversationHistory.forEach((msg) => {
-      if (msg.role === 'user') {
-        userMessages.push(msg.text);
-      }
-    });
+    // 의사 발언만 추출 (최근 10개)
+    const userMessages = conversationHistory
+      .filter(msg => msg.role === 'user')
+      .slice(-10)
+      .map((msg, idx) => `${idx + 1}. ${msg.text}`)
+      .join('\n');
     
-    // 최근 10개만 사용 (너무 많으면 API 부하 증가)
-    const recentMessages = userMessages.slice(-10);
-    const conversationText = recentMessages.map((text, idx) => `${idx + 1}. ${text}`).join('\n');
+    const cacheKey = getCacheKey(userMessages);
     
-    console.log(`[feedback.js] Sending ${recentMessages.length} recent doctor messages for feedback`);
-    console.log(`[feedback.js] Message text length: ${conversationText.length} chars`);
+    console.log(`[feedback.js] Feedback request with ${userMessages.split('\n').length} messages`);
 
-    // Gemini에 피드백 요청 (5단계 루브릭 기반) - 더 간단하게
+    // 1단계: 메모리 캐시 확인
+    if (feedbackCache.has(cacheKey)) {
+      console.log('[CACHE_HIT_MEMORY] Returning cached feedback');
+      return res.json({ 
+        feedbacks: feedbackCache.get(cacheKey), 
+        cached: true,
+        cacheType: 'memory'
+      });
+    }
+
+    // 2단계: Redis 캐시 확인
+    const redisFeedback = await getFromRedis(cacheKey);
+    if (redisFeedback) {
+      feedbackCache.set(cacheKey, redisFeedback);
+      return res.json({ 
+        feedbacks: redisFeedback, 
+        cached: true,
+        cacheType: 'redis'
+      });
+    }
+
+    // 3단계: API 호출
+    console.log('[API_CALL] Generating feedback...');
+    
+    const apiKey1 = process.env.GENAI_API_KEY;
+    const apiKey2 = process.env.GENAI_API_KEY_2 || apiKey1;
+    const selectedKey = userMessages.length % 2 === 0 ? apiKey1 : apiKey2;
+    
+    if (!selectedKey) {
+      return res.status(500).json({ error: 'API key not configured' });
+    }
+
     const prompt = `치과 진료 5단계로 평가:
 1. 인사 및 환자 확인
 2. 방문 이유 확인
@@ -34,155 +115,56 @@ module.exports = async (req, res) => {
 5. 진료 마무리
 
 의사 발언:
-${conversationText}
+${userMessages}
 
-JSON으로 응답:
-{"feedbacks": [{"stage": "1단계", "done": true, "text": "한 줄 평가"}]}
-최대 5개 항목만.`;
+JSON으로 응답 (5개 항목만):
+{"feedbacks": [{"stage": "1단계", "done": true, "text": "한 줄 평가"}]}`;
 
-    // 두 개의 API 키로 로드 밸런싱
-    const apiKey1 = process.env.GENAI_API_KEY;
-    const apiKey2 = process.env.GENAI_API_KEY_2;
-    
-    if (!apiKey1) {
-      return res.status(500).json({ error: 'GENAI_API_KEY not configured' });
-    }
-
-    // prompt의 길이를 기반으로 API 키 선택
-    const useKey2 = prompt.length % 2 === 1 && apiKey2;
-    const selectedKey = useKey2 ? apiKey2 : apiKey1;
-    const keyLabel = useKey2 ? 'GENAI_API_KEY_2' : 'GENAI_API_KEY';
-    
-    console.log(`[feedback.js] Using ${keyLabel} for feedback generation`);
-
-    // Google Generative AI REST API direct call
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${selectedKey}`;
-    
-    const requestBody = {
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: prompt }]
-        }
-      ],
-      generationConfig: {
-        temperature: 0.6,
-        maxOutputTokens: 180,
-      }
-    };
-    
-    console.log(`[feedback.js] Request body size: ${JSON.stringify(requestBody).length} bytes`);
-    const requestStartTime = Date.now();
-    
-    let response;
-    try {
-      response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-        timeout: 8000  // 8초 타임아웃 (Vercel 10초 제한 고려)
-      });
-    } catch (fetchErr) {
-      console.error('[ALERT] Fetch error (network/timeout):', fetchErr.message);
-      return res.status(503).json({ error: 'Network error', detail: fetchErr.message });
-    }
-
-    const requestDuration = Date.now() - requestStartTime;
-    console.log(`[feedback.js] API response status: ${response.status} (took ${requestDuration}ms)`);
-    console.log(`[feedback.js] Response headers: content-type=${response.headers.get('content-type')}`);
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + selectedKey, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 256 }
+      })
+    });
 
     if (!response.ok) {
-      console.error(`Feedback API error: ${response.status} ${response.statusText}`);
-      const errorText = await response.text();
-      console.error(`[DEBUG] Error response (first 500 chars): ${errorText.substring(0, 500)}`);
+      const errorData = await response.json().catch(() => ({}));
+      const errorMsg = errorData.error?.message || response.statusText;
       
-      // 특정 에러 상황 감지
       if (response.status === 429) {
-        console.error('[ALERT] Rate limit exceeded (429) on feedback endpoint - Queuing for retry');
-        // Retry-After 헤더 설정 (클라이언트가 재시도 시간 알 수 있음)
-        const retryAfter = response.headers.get('retry-after') || '5';
-        res.setHeader('Retry-After', retryAfter);
-        return res.status(429).json({ 
-          error: 'Rate limit exceeded', 
-          detail: 'API 사용량 제한 도달 - 잠시 후 다시 시도해주세요',
-          retryAfter: parseInt(retryAfter)
-        });
-      } else if (response.status === 403) {
-        console.error('[ALERT] Forbidden (403) - API key might be invalid or quota exceeded');
-        return res.status(403).json({ error: 'Access forbidden', detail: errorText });
-      } else if (response.status === 500 || response.status === 502 || response.status === 503) {
-        console.error('[ALERT] Server error from Google API');
-        return res.status(response.status).json({ error: 'Google API server error', detail: errorText });
+        console.error('[ALERT] Rate limit exceeded (429)');
+        return res.status(429).json({ error: 'Rate limit exceeded', detail: errorMsg });
       }
       
-      return res.status(response.status).json({ error: 'LLM API error', detail: errorText });
+      if (response.status === 403) {
+        console.error('[ALERT] Forbidden (403)', errorMsg);
+        return res.status(403).json({ error: 'Forbidden', detail: errorMsg });
+      }
+      
+      console.error(`[ALERT] API error (${response.status}):`, errorMsg);
+      return res.status(response.status).json({ error: 'API error', detail: errorMsg });
     }
 
-    let data;
-    try {
-      data = await response.json();
-    } catch (parseErr) {
-      console.error('[ALERT] Failed to parse JSON response:', parseErr.message);
-      const rawText = await response.text();
-      console.error(`[DEBUG] Raw response: ${rawText.substring(0, 500)}`);
-      return res.status(502).json({ error: 'Invalid JSON from API', detail: parseErr.message });
-    }
+    const data = await response.json();
+    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     
-    // 사용량 정보 확인
-    if (data?.usageMetadata) {
-      console.log(`[feedback.js] Token usage - input: ${data.usageMetadata.inputTokenCount}, output: ${data.usageMetadata.outputTokenCount}`);
-    }
+    // JSON 추출
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    const feedbackData = jsonMatch ? JSON.parse(jsonMatch[0]) : { feedbacks: [] };
 
-    // 응답 구조 검증
-    if (!data?.candidates) {
-      console.error('[ALERT] Response missing "candidates" field');
-      console.error(`[DEBUG] Response keys: ${Object.keys(data).join(', ')}`);
-      return res.status(200).json({ feedbacks: [] });
-    }
+    // 4단계: 캐시에 저장
+    feedbackCache.set(cacheKey, feedbackData.feedbacks);
+    await setToRedis(cacheKey, feedbackData.feedbacks);
 
-    if (data.candidates.length === 0) {
-      console.warn('[ALERT] Candidates array is empty');
-      if (data?.promptFeedback) {
-        console.warn('[DEBUG] Prompt feedback:', JSON.stringify(data.promptFeedback));
-      }
-      return res.status(200).json({ feedbacks: [] });
-    }
+    return res.json({ 
+      feedbacks: feedbackData.feedbacks, 
+      cached: false
+    });
 
-    const candidate = data.candidates[0];
-    if (candidate?.finishReason && candidate.finishReason !== 'STOP') {
-      console.warn(`[WARNING] Finish reason: ${candidate.finishReason}`);
-    }
-
-    // 응답에서 텍스트 추출
-    let responseText = '';
-    if (candidate?.content?.parts && candidate.content.parts.length > 0) {
-      responseText = candidate.content.parts[0].text || '';
-    }
-
-    if (!responseText) {
-      console.warn('[ALERT] No response text extracted from LLM');
-      console.warn(`[DEBUG] Candidate structure: ${JSON.stringify(candidate).substring(0, 500)}`);
-      return res.status(200).json({ feedbacks: [] });
-    }
-
-    // JSON 파싱
-    let feedbackData;
-    try {
-      feedbackData = JSON.parse(responseText);
-    } catch (e) {
-      // JSON 블록만 추출 시도
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        feedbackData = JSON.parse(jsonMatch[0]);
-      } else {
-        console.error('Failed to parse feedback response:', responseText);
-        return res.status(200).json({ feedbacks: [] });
-      }
-    }
-
-    return res.status(200).json(feedbackData);
-  } catch (error) {
-    console.error('Feedback error:', error);
-    return res.status(500).json({ error: 'server error', detail: error.message });
+  } catch (err) {
+    console.error('[ERROR]', err.message);
+    return res.status(500).json({ error: 'Server error', detail: err.message });
   }
 };
