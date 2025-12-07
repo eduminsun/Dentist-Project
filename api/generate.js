@@ -98,8 +98,15 @@ module.exports = async (req, res) => {
       
       // 특정 에러 상황 감지
       if (resp.status === 429) {
-        console.error('[ALERT] Rate limit exceeded (429)');
-        return res.status(429).json({ error: 'Rate limit exceeded', detail: 'API 사용량 제한 도달' });
+        console.error('[ALERT] Rate limit exceeded (429) - Queuing request for retry');
+        // Retry-After 헤더 설정 (클라이언트가 재시도 시간 알 수 있음)
+        const retryAfter = resp.headers.get('retry-after') || '5';
+        res.setHeader('Retry-After', retryAfter);
+        return res.status(429).json({ 
+          error: 'Rate limit exceeded', 
+          detail: 'API 사용량 제한 도달 - 잠시 후 다시 시도해주세요',
+          retryAfter: parseInt(retryAfter)
+        });
       } else if (resp.status === 403) {
         console.error('[ALERT] Forbidden (403) - API key might be invalid or quota exceeded');
         return res.status(403).json({ error: 'Access forbidden', detail: errorText });

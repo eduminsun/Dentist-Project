@@ -10,27 +10,35 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'No conversation history' });
     }
 
-    // 대화 내용을 정리 (의사의 발언만 평가)
-    let conversationText = '';
-    conversationHistory.forEach((msg, idx) => {
+    // 대화 내용을 정리 - 최근 10개 의사 발언만 추출 (용량 줄이기)
+    let userMessages = [];
+    conversationHistory.forEach((msg) => {
       if (msg.role === 'user') {
-        conversationText += `[${idx}] 의사: ${msg.text}\n`;
+        userMessages.push(msg.text);
       }
     });
+    
+    // 최근 10개만 사용 (너무 많으면 API 부하 증가)
+    const recentMessages = userMessages.slice(-10);
+    const conversationText = recentMessages.map((text, idx) => `${idx + 1}. ${text}`).join('\n');
+    
+    console.log(`[feedback.js] Sending ${recentMessages.length} recent doctor messages for feedback`);
+    console.log(`[feedback.js] Message text length: ${conversationText.length} chars`);
 
-    // Gemini에 피드백 요청 (5단계 루브릭 기반)
-    const prompt = `치과 진료 5단계 체크리스트로 평가하세요:
-1. 인사 및 환자 확인 (환자 이름 확인, 편한 인사)
-2. 방문 이유 확인 (주요 증상/불편 확인)
-3. 정보 수집 및 공감 (추가 질문, 환자 말 경청)
-4. 치료 계획 설명 (명확한 설명, 옵션 제시)
-5. 진료 마무리 (다음 단계 안내, 안심 제공)
+    // Gemini에 피드백 요청 (5단계 루브릭 기반) - 더 간단하게
+    const prompt = `치과 진료 5단계로 평가:
+1. 인사 및 환자 확인
+2. 방문 이유 확인
+3. 정보 수집 및 공감
+4. 치료 계획 설명
+5. 진료 마무리
 
 의사 발언:
 ${conversationText}
 
-잘 이루어진 단계와 개선 필요 단계를 JSON으로 응답:
-{"feedbacks": [{"stage": "5단계 이름", "done": true/false, "text": "한 줄 피드백"}]}`;
+JSON으로 응답:
+{"feedbacks": [{"stage": "1단계", "done": true, "text": "한 줄 평가"}]}
+최대 5개 항목만.`;
 
     // 두 개의 API 키로 로드 밸런싱
     const apiKey1 = process.env.GENAI_API_KEY;
@@ -90,8 +98,15 @@ ${conversationText}
       
       // 특정 에러 상황 감지
       if (response.status === 429) {
-        console.error('[ALERT] Rate limit exceeded (429) on feedback endpoint');
-        return res.status(429).json({ error: 'Rate limit exceeded', detail: 'API 사용량 제한 도달' });
+        console.error('[ALERT] Rate limit exceeded (429) on feedback endpoint - Queuing for retry');
+        // Retry-After 헤더 설정 (클라이언트가 재시도 시간 알 수 있음)
+        const retryAfter = response.headers.get('retry-after') || '5';
+        res.setHeader('Retry-After', retryAfter);
+        return res.status(429).json({ 
+          error: 'Rate limit exceeded', 
+          detail: 'API 사용량 제한 도달 - 잠시 후 다시 시도해주세요',
+          retryAfter: parseInt(retryAfter)
+        });
       } else if (response.status === 403) {
         console.error('[ALERT] Forbidden (403) - API key might be invalid or quota exceeded');
         return res.status(403).json({ error: 'Access forbidden', detail: errorText });

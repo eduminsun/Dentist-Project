@@ -562,9 +562,13 @@
                     // ✅ 백그라운드에서 피드백 생성
                     setTimeout(async () => {
                         try {
-                            // 6초 타임아웃 설정 (API 최대 응답 시간 + 여유)
-                            const controller = new AbortController();
-                            const timeoutId = setTimeout(() => controller.abort(), 6000);
+                            console.log('[FEEDBACK] Starting feedback generation...');
+                            console.log('[FEEDBACK] Case ID:', selected);
+                            console.log('[FEEDBACK] Conversation turns:', conversationHistory.length);
+                            
+                            // ✅ 타임아웃 제거 - API 응답이 올 때까지 대기
+                            const feedbackStartTime = Date.now();
+                            console.log('[FEEDBACK] Sending simplified request to /api/feedback');
                             
                             const feedbackRes = await fetch('/api/feedback', {
                                 method: 'POST',
@@ -572,18 +576,26 @@
                                 body: JSON.stringify({
                                     conversationHistory: conversationHistory,
                                     caseId: selected
-                                }),
-                                signal: controller.signal
+                                })
+                            });
+                            const feedbackDuration = Date.now() - feedbackStartTime;
+                            
+                            console.log('[FEEDBACK] Response received:', {
+                                status: feedbackRes.status,
+                                statusText: feedbackRes.statusText,
+                                duration: feedbackDuration + 'ms'
                             });
 
-                            clearTimeout(timeoutId);
-
                             if (!feedbackRes.ok) {
-                                console.error('Feedback API error:', feedbackRes.status);
+                                console.error('[FEEDBACK] API error:', {
+                                    status: feedbackRes.status,
+                                    statusText: feedbackRes.statusText
+                                });
                             }
 
                             const feedbackData = await feedbackRes.json();
-                            console.log('Feedback received:', feedbackData);
+                            console.log('[FEEDBACK] Parsed response:', feedbackData);
+                            console.log('[FEEDBACK] Feedbacks count:', feedbackData.feedbacks?.length || 0);
 
                             // 피드백 완료 후 업데이트
                             localStorage.setItem('last_conversation', JSON.stringify({
@@ -593,11 +605,19 @@
                                 isGenerating: false
                             }));
                             
+                            console.log('[FEEDBACK] Successfully saved to localStorage');
+                            
                             // 피드백 페이지에 새로고침 신호
                             window.dispatchEvent(new CustomEvent('feedbackReady'));
                         } catch (e) {
+                            console.error('[FEEDBACK] Exception caught:', {
+                                name: e.name,
+                                message: e.message,
+                                stack: e.stack
+                            });
+                            
                             if (e.name === 'AbortError') {
-                                console.warn('Feedback generation timeout after 5 seconds, showing mock data');
+                                console.warn('[FEEDBACK] Abort/Timeout error - using mock data');
                                 // 5초 이상 걸리면 mock 데이터 사용
                                 const mockData = {
                                     caseId: selected,
@@ -612,9 +632,10 @@
                                     isGenerating: false
                                 };
                                 localStorage.setItem('last_conversation', JSON.stringify(mockData));
+                                console.log('[FEEDBACK] Mock data saved');
                                 window.dispatchEvent(new CustomEvent('feedbackReady'));
                             } else {
-                                console.error('Error generating feedback:', e);
+                                console.error('[FEEDBACK] Non-timeout error - saving empty feedbacks');
                                 // 피드백 없이 표시
                                 localStorage.setItem('last_conversation', JSON.stringify({
                                     caseId: selected,
@@ -791,16 +812,18 @@
                     const response = await fetch(url, options);
                     // 429 (Rate Limit)는 재시도
                     if (response.status === 429 && attempt < maxRetries) {
-                        console.warn(`Rate limited, retry attempt ${attempt + 1}/${maxRetries}`);
-                        // 지수 백오프: 1초, 2초 대기
-                        await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 1000));
+                        const retryAfter = response.headers.get('retry-after') || (attempt + 1) * 2;
+                        const waitTime = parseInt(retryAfter) * 1000;
+                        console.warn(`[429] Rate limited - waiting ${waitTime}ms before retry ${attempt + 1}/${maxRetries}`);
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
                         continue;
                     }
                     return response;
                 } catch (err) {
                     lastError = err;
                     if (attempt < maxRetries) {
-                        console.warn(`Network error, retry attempt ${attempt + 1}/${maxRetries}`);
+                        console.warn(`Network error, retry attempt ${attempt + 1}/${maxRetries}: ${err.message}`);
+                        // 지수 백오프: 500ms, 1000ms
                         await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 500));
                         continue;
                     }

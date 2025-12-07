@@ -613,20 +613,110 @@
             }
         });
 
-        // ✅ 피드백 생성 상태 관리
-        function renderConversation() {
+        // ✅ 백그라운드에서 피드백 생성 (feedback.html 로드 시 자동 실행)
+        async function generateFeedbackInBackground() {
             try {
                 const raw = localStorage.getItem('last_conversation');
                 if (!raw) {
-                    console.warn('No conversation found');
+                    console.warn('[FEEDBACK_GEN] No conversation data found');
+                    return;
+                }
+
+                const data = JSON.parse(raw);
+                
+                // 이미 피드백이 있거나 생성 중이 아니면 스킵
+                if (!data.isGenerating || data.feedbacks?.length > 0) {
+                    console.log('[FEEDBACK_GEN] Feedback already exists or not needed');
+                    return;
+                }
+
+                console.log('[FEEDBACK_GEN] Starting feedback generation for case:', data.caseId);
+
+                // 의사 발언만 추출
+                const doctorStatements = data.items
+                    .filter(item => item.role === 'user')
+                    .map(item => item.text)
+                    .join('\n');
+
+                const feedbackPrompt = `당신은 치과 의료 교육자입니다. 다음 의사의 진료 대화를 평가하세요.
+
+의사의 발언:
+${doctorStatements}
+
+5단계의 진료 흐름에서 각 단계가 잘 이루어졌는지 평가하세요:
+1. 인사 및 환자 확인
+2. 방문 이유 확인
+3. 정보 수집 및 공감
+4. 치료 계획 설명
+5. 진료 마무리
+
+응답은 반드시 다음 JSON 형식으로 작성하세요:
+{"feedbacks": [{"stage": "1단계 이름", "done": true/false, "text": "한 줄 피드백"}, ...]}`;
+
+                const response = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        conversationHistory: data.items,
+                        caseId: data.caseId,
+                        prompt: feedbackPrompt
+                    })
+                });
+
+                console.log('[FEEDBACK_GEN] API response status:', response.status);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('[FEEDBACK_GEN] API error:', response.status, errorText);
+                    return;
+                }
+
+                const feedbackData = await response.json();
+                console.log('[FEEDBACK_GEN] Received feedback:', feedbackData);
+
+                if (feedbackData.feedbacks) {
+                    // 피드백 저장
+                    localStorage.setItem('last_conversation', JSON.stringify({
+                        caseId: data.caseId,
+                        items: data.items,
+                        feedbacks: feedbackData.feedbacks,
+                        isGenerating: false
+                    }));
+
+                    console.log('[FEEDBACK_GEN] Feedback saved and isGenerating set to false');
+                    
+                    // 피드백 준비 완료 이벤트 발송
+                    window.dispatchEvent(new CustomEvent('feedbackReady'));
+                }
+            } catch (error) {
+                console.error('[FEEDBACK_GEN] Error generating feedback:', error);
+            }
+        }
+
+        // ✅ 피드백 생성 상태 관리
+        function renderConversation() {
+            try {
+                console.log('[RENDER_FEEDBACK] Starting renderConversation...');
+                const raw = localStorage.getItem('last_conversation');
+                if (!raw) {
+                    console.warn('[RENDER_FEEDBACK] No conversation found in localStorage');
                     return;
                 }
                 
                 const data = JSON.parse(raw);
+                console.log('[RENDER_FEEDBACK] Data loaded:', {
+                    caseId: data.caseId,
+                    itemsCount: data.items?.length || 0,
+                    feedbacksCount: data.feedbacks?.length || 0,
+                    isGenerating: data.isGenerating
+                });
                 
                 // ✅ 대화 복기는 항상 표시
                 const wrapper = document.getElementById('conversation-wrapper');
-                if (!wrapper) return;
+                if (!wrapper) {
+                    console.error('[RENDER_FEEDBACK] conversation-wrapper not found');
+                    return;
+                }
                 
                 // 기존 내용 제거
                 wrapper.innerHTML = '';
@@ -676,43 +766,24 @@
                 const feedbackContent = document.getElementById('feedback-content');
                 
                 if (data.isGenerating) {
-                    // 피드백 생성 중 - 5초 후 자동으로 로딩 숨김
+                    console.log('[RENDER_FEEDBACK] Feedback is still generating, showing loading state');
+                    // 피드백 생성 중 - 스피너 표시, API 응답 때까지 기다림
                     loadingState.style.display = 'block';
                     feedbackContent.style.display = 'none';
-                    
-                    // 5초 타임아웃: 로딩 스피너 숨기고 피드백 섹션만 표시
-                    if (!data.loadingStartTime) {
-                        data.loadingStartTime = Date.now();
-                        localStorage.setItem('last_conversation', JSON.stringify(data));
-                    }
-                    
-                    const elapsedTime = Date.now() - (data.loadingStartTime || Date.now());
-                    if (elapsedTime > 5000) {
-                        // 5초 이상 경과 → 로딩 숨기고 피드백 섹션 표시
-                        loadingState.style.display = 'none';
-                        feedbackContent.style.display = 'block';
-                        data.isGenerating = false;
-                        localStorage.setItem('last_conversation', JSON.stringify(data));
-                        renderRubric(data.feedbacks);
-                        
-                        // 6초 뒤에 예시 섹션 표시
-                        setTimeout(() => {
-                            const exampleSection = document.getElementById('example-section');
-                            if (exampleSection) {
-                                exampleSection.style.display = 'block';
-                            }
-                        }, 1000);  // 5초 경과 후 추가로 1초 대기 = 총 6초
-                    }
+                    console.log('[RENDER_FEEDBACK] Waiting for API feedback...');
                 } else {
                     // 피드백 생성 완료
+                    console.log('[RENDER_FEEDBACK] Feedback generation complete, showing content');
                     loadingState.style.display = 'none';
                     feedbackContent.style.display = 'block';
+                    console.log('[RENDER_FEEDBACK] Rendering rubric with', data.feedbacks?.length || 0, 'feedbacks');
                     renderRubric(data.feedbacks);
                     
                     // 6초 뒤에 예시 섹션 표시
                     setTimeout(() => {
                         const exampleSection = document.getElementById('example-section');
                         if (exampleSection) {
+                            console.log('[RENDER_FEEDBACK] Showing example section');
                             exampleSection.style.display = 'block';
                         }
                     }, 6000);
@@ -724,11 +795,14 @@
 
         // ✅ 루브릭 체크리스트 렌더링
         function renderRubric(feedbacks) {
+            console.log('[RENDER_RUBRIC] Starting with feedbacks:', feedbacks?.length || 0);
+            
             const rubricDiv = document.getElementById('rubric-checklist');
             const improvementsSection = document.getElementById('improvements-section');
             const improvementsList = document.getElementById('improvements-list');
             
             if (!feedbacks || feedbacks.length === 0) {
+                console.warn('[RENDER_RUBRIC] No feedbacks provided');
                 rubricDiv.innerHTML = '<p style="text-align: center; color: var(--text-muted);">피드백을 불러올 수 없습니다.</p>';
                 return;
             }
@@ -739,7 +813,13 @@
             // 5단계 루브릭 순서
             const stages = ['1단계', '2단계', '3단계', '4단계', '5단계'];
             
-            feedbacks.forEach(fb => {
+            feedbacks.forEach((fb, idx) => {
+                console.log(`[RENDER_RUBRIC] Processing feedback ${idx + 1}:`, {
+                    stage: fb.stage,
+                    done: fb.done,
+                    text: fb.text?.substring(0, 50) + '...'
+                });
+                
                 // stage 문자열에서 단계 번호 추출
                 const stageNum = fb.stage.substring(0, 3); // "1단계" 형식
                 const isDone = fb.done === true;
@@ -758,6 +838,8 @@
                 }
             });
             
+            console.log('[RENDER_RUBRIC] Rendering complete with', improvements.length, 'improvements needed');
+            
             // 개선 포인트 섹션 표시/숨김
             if (improvements.length > 0) {
                 improvementsSection.style.display = 'block';
@@ -770,14 +852,19 @@
         }
 
         // ✅ 초기 렌더링
+        console.log('[INIT] Starting initial render');
         renderConversation();
         
+        // ✅ 백그라운드에서 피드백 생성 시작
+        generateFeedbackInBackground();
+        
         // ✅ 5초 타이머: 피드백 생성이 계속 진행 중이면 로딩 숨김
-        setInterval(() => {
+        const renderInterval = setInterval(() => {
             const raw = localStorage.getItem('last_conversation');
             if (raw) {
                 const data = JSON.parse(raw);
                 if (data.isGenerating) {
+                    console.log('[TIMER] Feedback still generating, checking...');
                     // 여전히 생성 중이면 renderConversation 호출하여 타임아웃 체크
                     renderConversation();
                 }
@@ -786,9 +873,12 @@
         
         // ✅ 피드백이 완료되면 다시 렌더링
         window.addEventListener('feedbackReady', () => {
-            console.log('Feedback ready event received');
+            console.log('[FEEDBACK_READY_EVENT] Feedback ready event received');
             // 약간의 딜레이 후 다시 렌더링
-            setTimeout(renderConversation, 500);
+            setTimeout(() => {
+                console.log('[FEEDBACK_READY_EVENT] Re-rendering after event');
+                renderConversation();
+            }, 500);
         });
 
         document.getElementById('retry-btn')?.addEventListener('click', () => {
