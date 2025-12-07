@@ -416,6 +416,86 @@
     <button id="open-sidebar-btn">열기</button>
 
     <script>
+        // 🔄 Session ID 생성 (20명이 같은 세션에 참여)
+        const sessionId = getQueryParam('session') || 'default-session';
+        let syncPollInterval = null;
+
+        // 공유 상태 폴링 함수 (1초마다 확인)
+        async function pollSharedState() {
+            try {
+                const response = await fetch(`/api/sync?sessionId=${encodeURIComponent(sessionId)}`);
+                if (!response.ok) return;
+                
+                const { data, timestamp } = await response.json();
+                if (!data) return;
+                
+                // 공유 상태 적용 (예: 팀 진행 상황, 공지사항 등)
+                handleSharedStateUpdate(data);
+            } catch (err) {
+                console.warn('[Sync] Polling error:', err.message);
+            }
+        }
+
+        // 공유 상태 처리
+        function handleSharedStateUpdate(sharedData) {
+            // 예시: 모든 참가자에게 공지
+            if (sharedData?.announcement && !window.lastAnnouncement) {
+                window.lastAnnouncement = sharedData.announcement;
+                console.log('[Shared] Announcement:', sharedData.announcement);
+                // UI에 공지사항 표시 가능
+            }
+            
+            // 진행 상황 추적
+            if (sharedData?.groupProgress) {
+                console.log(`[Sync] Group Progress: ${sharedData.groupProgress.completed}/${sharedData.groupProgress.total}`);
+            }
+        }
+
+        // 상태 업데이트 함수 (로컬 진행 상황을 공유 저장소에 전송)
+        async function uploadLocalProgress() {
+            try {
+                const progressData = {
+                    sessionId,
+                    case: selected,
+                    messageCount: conversationHistory.length,
+                    currentStep,
+                    timestamp: Date.now()
+                };
+
+                await fetch('/api/sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId,
+                        data: {
+                            ...progressData,
+                            // 모든 사용자의 진행 상황을 수집할 수 있음
+                        },
+                        ttl: 3600
+                    })
+                });
+            } catch (err) {
+                console.warn('[Sync] Upload error:', err.message);
+            }
+        }
+
+        // 페이지 로드 시 폴링 시작
+        function startSyncPolling() {
+            if (syncPollInterval) clearInterval(syncPollInterval);
+            syncPollInterval = setInterval(pollSharedState, 1000); // 1초마다 확인
+            console.log('[Sync] Polling started for session:', sessionId);
+        }
+
+        // 페이지 언로드 시 폴링 중지
+        window.addEventListener('beforeunload', () => {
+            if (syncPollInterval) clearInterval(syncPollInterval);
+        });
+
+        function getQueryParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
         const toggleBtn = document.getElementById('toggle-btn');
         const appShell = document.getElementById('app-shell');
         const sidebar = document.getElementById('sidebar');
@@ -444,6 +524,9 @@
 
         // initial UI sync
         updateSidebarUI();
+        
+        // 동기화 폴링 시작
+        startSyncPolling();
 
         // Simple timer mock
         const timerElement = document.getElementById('timer');
@@ -470,15 +553,18 @@
                         isGenerating: true
                     }));
                     
+                    // 진행 상황 업로드
+                    await uploadLocalProgress();
+                    
                     // 피드백 화면으로 이동 (로딩 상태 표시)
                     window.location.href = 'feedback.html';
                     
                     // ✅ 백그라운드에서 피드백 생성
                     setTimeout(async () => {
                         try {
-                            // 5초 타임아웃 설정
+                            // 6초 타임아웃 설정 (API 최대 응답 시간 + 여유)
                             const controller = new AbortController();
-                            const timeoutId = setTimeout(() => controller.abort(), 5000);
+                            const timeoutId = setTimeout(() => controller.abort(), 6000);
                             
                             const feedbackRes = await fetch('/api/feedback', {
                                 method: 'POST',
@@ -697,6 +783,32 @@
         const inputField = document.getElementById('message-input');
         const sendBtn = document.getElementById('send-btn');
 
+        // 재시도 로직이 포함된 fetch 함수
+        async function fetchWithRetry(url, options, maxRetries = 2) {
+            let lastError;
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url, options);
+                    // 429 (Rate Limit)는 재시도
+                    if (response.status === 429 && attempt < maxRetries) {
+                        console.warn(`Rate limited, retry attempt ${attempt + 1}/${maxRetries}`);
+                        // 지수 백오프: 1초, 2초 대기
+                        await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 1000));
+                        continue;
+                    }
+                    return response;
+                } catch (err) {
+                    lastError = err;
+                    if (attempt < maxRetries) {
+                        console.warn(`Network error, retry attempt ${attempt + 1}/${maxRetries}`);
+                        await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 500));
+                        continue;
+                    }
+                }
+            }
+            throw lastError;
+        }
+
         function sendMessage() {
             const text = inputField.value.trim();
             if (!text) return;
@@ -709,11 +821,16 @@
             const typingEl = chatMessages.lastElementChild;
             inputField.disabled = true;
             sendBtn.disabled = true;
-            fetch('/api/generate', {
+            
+            // 로드 밸런싱은 서버 측에서 자동으로 처리 (GENAI_API_KEY와 GENAI_API_KEY_2 사용)
+            const endpoint = '/api/generate';
+            console.log(`[Chat] Sending message to ${endpoint}`);
+            
+            fetchWithRetry(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
-            })
+            }, 2)
             .then(async (r) => {
                 // read raw body text first (handles JSON and plain text errors)
                 const raw = await r.text().catch(() => '');

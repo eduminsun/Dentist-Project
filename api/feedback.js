@@ -32,13 +32,23 @@ ${conversationText}
 잘 이루어진 단계와 개선 필요 단계를 JSON으로 응답:
 {"feedbacks": [{"stage": "5단계 이름", "done": true/false, "text": "한 줄 피드백"}]}`;
 
-    const apiKey = process.env.GENAI_API_KEY;
-    if (!apiKey) {
+    // 두 개의 API 키로 로드 밸런싱
+    const apiKey1 = process.env.GENAI_API_KEY;
+    const apiKey2 = process.env.GENAI_API_KEY_2;
+    
+    if (!apiKey1) {
       return res.status(500).json({ error: 'GENAI_API_KEY not configured' });
     }
 
+    // prompt의 길이를 기반으로 API 키 선택
+    const useKey2 = prompt.length % 2 === 1 && apiKey2;
+    const selectedKey = useKey2 ? apiKey2 : apiKey1;
+    const keyLabel = useKey2 ? 'GENAI_API_KEY_2' : 'GENAI_API_KEY';
+    
+    console.log(`[feedback.js] Using ${keyLabel} for feedback generation`);
+
     // Google Generative AI REST API direct call
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${selectedKey}`;
     
     const requestBody = {
       contents: [
@@ -53,22 +63,30 @@ ${conversationText}
       }
     };
     
-    console.log('[feedback.js] Calling Google API for feedback generation');
+    console.log(`[feedback.js] Request body size: ${JSON.stringify(requestBody).length} bytes`);
     const requestStartTime = Date.now();
     
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
-    });
+    let response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+        timeout: 8000  // 8초 타임아웃 (Vercel 10초 제한 고려)
+      });
+    } catch (fetchErr) {
+      console.error('[ALERT] Fetch error (network/timeout):', fetchErr.message);
+      return res.status(503).json({ error: 'Network error', detail: fetchErr.message });
+    }
 
     const requestDuration = Date.now() - requestStartTime;
     console.log(`[feedback.js] API response status: ${response.status} (took ${requestDuration}ms)`);
+    console.log(`[feedback.js] Response headers: content-type=${response.headers.get('content-type')}`);
 
     if (!response.ok) {
       console.error(`Feedback API error: ${response.status} ${response.statusText}`);
       const errorText = await response.text();
-      console.error('Error response:', errorText);
+      console.error(`[DEBUG] Error response (first 500 chars): ${errorText.substring(0, 500)}`);
       
       // 특정 에러 상황 감지
       if (response.status === 429) {
@@ -85,24 +103,50 @@ ${conversationText}
       return res.status(response.status).json({ error: 'LLM API error', detail: errorText });
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseErr) {
+      console.error('[ALERT] Failed to parse JSON response:', parseErr.message);
+      const rawText = await response.text();
+      console.error(`[DEBUG] Raw response: ${rawText.substring(0, 500)}`);
+      return res.status(502).json({ error: 'Invalid JSON from API', detail: parseErr.message });
+    }
     
     // 사용량 정보 확인
     if (data?.usageMetadata) {
       console.log(`[feedback.js] Token usage - input: ${data.usageMetadata.inputTokenCount}, output: ${data.usageMetadata.outputTokenCount}`);
     }
 
+    // 응답 구조 검증
+    if (!data?.candidates) {
+      console.error('[ALERT] Response missing "candidates" field');
+      console.error(`[DEBUG] Response keys: ${Object.keys(data).join(', ')}`);
+      return res.status(200).json({ feedbacks: [] });
+    }
+
+    if (data.candidates.length === 0) {
+      console.warn('[ALERT] Candidates array is empty');
+      if (data?.promptFeedback) {
+        console.warn('[DEBUG] Prompt feedback:', JSON.stringify(data.promptFeedback));
+      }
+      return res.status(200).json({ feedbacks: [] });
+    }
+
+    const candidate = data.candidates[0];
+    if (candidate?.finishReason && candidate.finishReason !== 'STOP') {
+      console.warn(`[WARNING] Finish reason: ${candidate.finishReason}`);
+    }
+
     // 응답에서 텍스트 추출
     let responseText = '';
-    if (data?.candidates && data.candidates.length > 0) {
-      const candidate = data.candidates[0];
-      if (candidate?.content?.parts && candidate.content.parts.length > 0) {
-        responseText = candidate.content.parts[0].text || '';
-      }
+    if (candidate?.content?.parts && candidate.content.parts.length > 0) {
+      responseText = candidate.content.parts[0].text || '';
     }
 
     if (!responseText) {
-      console.warn('No response text from LLM');
+      console.warn('[ALERT] No response text extracted from LLM');
+      console.warn(`[DEBUG] Candidate structure: ${JSON.stringify(candidate).substring(0, 500)}`);
       return res.status(200).json({ feedbacks: [] });
     }
 
