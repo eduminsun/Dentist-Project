@@ -62,6 +62,7 @@ module.exports = async (req, res) => {
     };
     
     console.log(`[generate.js] Calling Google API for case: ${caseId}`);
+    const requestStartTime = Date.now();
     
     const resp = await fetch(url, {
       method: 'POST',
@@ -69,17 +70,36 @@ module.exports = async (req, res) => {
       body: JSON.stringify(requestBody)
     });
     
-    console.log(`[generate.js] API response status: ${resp.status}`);
+    const requestDuration = Date.now() - requestStartTime;
+    console.log(`[generate.js] API response status: ${resp.status} (took ${requestDuration}ms)`);
     
     if (!resp.ok) {
       console.error(`API error: ${resp.status} ${resp.statusText}`);
       const errorText = await resp.text();
       console.error('Error response:', errorText);
+      
+      // 특정 에러 상황 감지
+      if (resp.status === 429) {
+        console.error('[ALERT] Rate limit exceeded (429)');
+        return res.status(429).json({ error: 'Rate limit exceeded', detail: 'API 사용량 제한 도달' });
+      } else if (resp.status === 403) {
+        console.error('[ALERT] Forbidden (403) - API key might be invalid or quota exceeded');
+        return res.status(403).json({ error: 'Access forbidden', detail: errorText });
+      } else if (resp.status === 500 || resp.status === 502 || resp.status === 503) {
+        console.error('[ALERT] Server error from Google API');
+        return res.status(resp.status).json({ error: 'Google API server error', detail: errorText });
+      }
+      
       return res.status(resp.status).json({ error: 'LLM API error', detail: errorText });
     }
     
     const data = await resp.json();
     console.log('[generate.js] API response received, parsing...');
+    
+    // 사용량 정보 확인
+    if (data?.usageMetadata) {
+      console.log(`[generate.js] Token usage - input: ${data.usageMetadata.inputTokenCount}, output: ${data.usageMetadata.outputTokenCount}`);
+    }
     
     // Extract text from response
     // Response shape: { candidates: [{ content: { parts: [{ text: '...' }] } }] }

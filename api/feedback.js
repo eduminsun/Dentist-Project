@@ -53,20 +53,44 @@ ${conversationText}
       }
     };
     
+    console.log('[feedback.js] Calling Google API for feedback generation');
+    const requestStartTime = Date.now();
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody)
     });
 
+    const requestDuration = Date.now() - requestStartTime;
+    console.log(`[feedback.js] API response status: ${response.status} (took ${requestDuration}ms)`);
+
     if (!response.ok) {
       console.error(`Feedback API error: ${response.status} ${response.statusText}`);
       const errorText = await response.text();
       console.error('Error response:', errorText);
+      
+      // 특정 에러 상황 감지
+      if (response.status === 429) {
+        console.error('[ALERT] Rate limit exceeded (429) on feedback endpoint');
+        return res.status(429).json({ error: 'Rate limit exceeded', detail: 'API 사용량 제한 도달' });
+      } else if (response.status === 403) {
+        console.error('[ALERT] Forbidden (403) - API key might be invalid or quota exceeded');
+        return res.status(403).json({ error: 'Access forbidden', detail: errorText });
+      } else if (response.status === 500 || response.status === 502 || response.status === 503) {
+        console.error('[ALERT] Server error from Google API');
+        return res.status(response.status).json({ error: 'Google API server error', detail: errorText });
+      }
+      
       return res.status(response.status).json({ error: 'LLM API error', detail: errorText });
     }
 
     const data = await response.json();
+    
+    // 사용량 정보 확인
+    if (data?.usageMetadata) {
+      console.log(`[feedback.js] Token usage - input: ${data.usageMetadata.inputTokenCount}, output: ${data.usageMetadata.outputTokenCount}`);
+    }
 
     // 응답에서 텍스트 추출
     let responseText = '';
