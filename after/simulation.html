@@ -44,9 +44,9 @@
 
         /* Sidebar */
         .sidebar {
-            background: var(--bg-sidebar);
+            background: #ffffff;
             padding: 28px 24px;
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
             gap: 24px;
@@ -74,22 +74,40 @@
 
         .sidebar-header h2 {
             font-size: 1.1rem;
+            color: #1a1a1a;
         }
 
         .toggle-btn,
         .end-btn {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.08);
             border: none;
-            color: var(--text-main);
+            color: #ffffff;
             padding: 10px 14px;
             border-radius: 10px;
             cursor: pointer;
-            transition: background 0.2s ease;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn {
+            color: #1a1a1a;
         }
 
         .toggle-btn:hover,
         .end-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.15);
+        }
+
+        /* 모든 체크리스트 완료 상태 */
+        .end-btn.all-completed {
+            background: #20b2aa;
+            color: #ffffff;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(32, 178, 170, 0.3);
+        }
+
+        .end-btn.all-completed:hover {
+            background: #1a9d96;
+            box-shadow: 0 6px 16px rgba(32, 178, 170, 0.4);
         }
 
         .ccg-steps {
@@ -101,21 +119,48 @@
         .ccg-step {
             padding: 12px 14px;
             border-radius: 12px;
-            background: rgba(0, 0, 0, 0.15);
+            background: rgba(0, 0, 0, 0.06);
             font-size: 0.95rem;
-            color: var(--text-muted);
+            color: #1a1a1a;
             cursor: pointer;
+            transition: all 0.2s ease;
         }
 
         .ccg-step.active {
             background: rgba(0, 163, 255, 0.15);
-            color: var(--text-main);
+            color: #1a1a1a;
             border-left: 3px solid var(--accent);
         }
 
         .ccg-step.active::before {
             content: "▶ ";
             color: var(--accent);
+        }
+
+        /* 단계별 체크리스트 컨테이너 */
+        .step-checklist {
+            display: none;
+            padding: 12px 14px 12px 28px;
+            background: rgba(0, 163, 255, 0.08);
+            border-radius: 8px;
+            margin-top: 6px;
+            margin-bottom: 8px;
+        }
+
+        .step-checklist.open {
+            display: block;
+            animation: slideDown 0.2s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Chat area */
@@ -139,10 +184,12 @@
             color: var(--text-muted);
         }
 
-        .timer {
-            font-weight: 600;
-            letter-spacing: 0.1em;
-            color: var(--accent);
+        .sidebar-tip {
+            font-size: 0.9rem;
+            color: #1a1a1a;
+            line-height: 1.5;
+            margin-bottom: 14px;
+            padding: 0;
         }
 
         /* Suggestions panel placed at bottom of sidebar */
@@ -154,28 +201,94 @@
             border: 1px solid rgba(255,255,255,0.04);
         }
 
+        .navigation-panel {
+            padding-bottom: 14px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 8px;
+        }
+
+        .back-btn {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.08);
+            border: none;
+            color: #1a1a1a;
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .back-btn:hover {
+            background: rgba(0, 0, 0, 0.15);
+        }
+
         .suggestions-panel h4 {
             font-size: 0.95rem;
             margin-bottom: 10px;
-            color: var(--text-muted);
+            color: #333333;
         }
 
         .suggestion-chip {
-            background: rgba(255,255,255,0.03);
-            color: var(--text-main);
+            background: rgba(0, 0, 0, 0.08);
+            color: #1a1a1a;
             padding: 8px 10px;
             border-radius: 16px;
             font-size: 0.9rem;
             cursor: pointer;
-            border: 1px solid rgba(255,255,255,0.02);
+            border: 1px solid rgba(0, 0, 0, 0.1);
             margin: 4px;
             display: inline-block;
         }
 
         .suggestion-chip:hover {
-            background: rgba(0,163,255,0.12);
-            color: white;
+            background: rgba(0, 163, 255, 0.15);
+            color: #1a1a1a;
             transform: translateY(-2px);
+        }
+
+        /* 체크리스트 스타일 */
+        .checklist-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .checklist-item:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .checklist-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+
+        .checklist-item label {
+            flex: 1;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #1a1a1a;
+            margin: 0;
+        }
+
+        .checklist-item input[type="checkbox"]:checked + label {
+            color: #888888;
+            text-decoration: line-through;
         }
 
         .chat-scroll {
@@ -356,27 +469,33 @@
 <body>
     <div class="app-shell" id="app-shell">
         <aside class="sidebar" id="sidebar">
+            <div class="navigation-panel">
+                <a href="case-selection.html" class="back-btn" id="sidebar-back-btn" style="display: flex; align-items: center; justify-content: center; text-decoration: none;">⬅ 케이스 다시 선택하기</a>
+            </div>
+
             <div class="sidebar-header">
                 <h2>대화 흐름 가이드 (CCG)</h2>
                 <button class="toggle-btn" id="toggle-btn">닫기</button>
             </div>
             <div class="ccg-steps">
-                <div class="ccg-step">1. 인사 및 환자 확인</div>
-                <div class="ccg-step">2. 방문 이유 확인</div>
-                <div class="ccg-step">3. 정보 수집 및 공감</div>
-                <div class="ccg-step">4. 치료 계획 설명</div>
-                <div class="ccg-step">5. 진료 마무리</div>
+                <div class="ccg-step" data-step="0">1. 인사 및 환자 확인</div>
+                <div class="step-checklist" id="checklist-0"></div>
+                
+                <div class="ccg-step" data-step="1">2. 방문 이유 확인</div>
+                <div class="step-checklist" id="checklist-1"></div>
+                
+                <div class="ccg-step" data-step="2">3. 정보 수집 및 공감</div>
+                <div class="step-checklist" id="checklist-2"></div>
+                
+                <div class="ccg-step" data-step="3">4. 치료 계획 설명</div>
+                <div class="step-checklist" id="checklist-3"></div>
+                
+                <div class="ccg-step" data-step="4">5. 진료 마무리</div>
+                <div class="step-checklist" id="checklist-4"></div>
             </div>
-            <p class="sidebar-tip">각 단계에 집중하면서 환자의 감정과 필요를 함께 확인해 보세요.</p>
+            <p class="sidebar-tip">각 단계 체크리스트를 확인하면서 환자를 진료하는 과정에서 필요한 내용을 확인하세요.</p>
 
-            <div class="suggestions-panel" id="suggestions-panel" aria-hidden="false">
-                <h4 id="suggestions-title">추천 질문 (인사 및 환자 확인)</h4>
-                <div id="suggestion-chips" aria-live="polite"></div>
-                <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
-                    <button id="prev-step-btn" class="toggle-btn" type="button">이전 단계</button>
-                    <button id="next-step-btn" class="toggle-btn" type="button">다음 단계</button>
-                </div>
-            </div>
+            <!-- 제안 패널 제거됨 -->
         </aside>
 
         <section class="conversation-area">
@@ -385,7 +504,6 @@
                     <strong id="case-title">시나리오</strong>
                     <span id="patient-info">환자 정보</span>
                 </div>
-                <div class="timer" id="timer">00:00</div>
                 <button class="end-btn" id="end-btn">시뮬레이션 종료</button>
             </div>
 
@@ -528,15 +646,9 @@
         // 동기화 폴링 시작
         startSyncPolling();
 
-        // Simple timer mock
-        const timerElement = document.getElementById('timer');
-        let seconds = 0;
-        setInterval(() => {
-            seconds += 1;
-            const minutes = String(Math.floor(seconds / 60)).padStart(2, '0');
-            const secs = String(seconds % 60).padStart(2, '0');
-            timerElement.textContent = `${minutes}:${secs}`;
-        }, 1000);
+        // 시뮬레이션 시작 시간 기록
+        const simulationStartTime = Date.now();
+
         // End simulation -> feedback
         const endBtn = document.getElementById('end-btn');
         if (endBtn) {
@@ -546,9 +658,11 @@
                     endBtn.textContent = '피드백 분석 중...';
 
                     // ✅ 피드백 생성 중 상태를 먼저 저장
+                    const elapsedSeconds = Math.round((Date.now() - simulationStartTime) / 1000);
                     localStorage.setItem('last_conversation', JSON.stringify({
                         caseId: selected,
                         items: conversationHistory,
+                        elapsedSeconds: elapsedSeconds,
                         feedbacks: [],
                         isGenerating: true
                     }));
@@ -664,22 +778,25 @@
             'lee-jiwon': {
                 title: '시나리오: 이지원',
                 info: 'M · 25 · 불안형',
+                symptom: '입 안이 쓰라려요',
                 messages: [
-                    {role: 'patient', text: '안녕하세요, 의사 선생님. 요즘 입 안이 쓰라려요.'},
+                    {role: 'patient', text: '안녕하세요'},
                 ]
             },
             'jo-minseon': {
                 title: '시나리오: 조민선',
                 info: 'F · 30 · 민감형',
+                symptom: '사랑니가 아파요',
                 messages: [
-                    {role: 'patient', text: '사랑니 부위가 부은 것 같고 씹을 때 아파요. 그런데 발치는 정말 하기 싫어요.'}
+                    {role: 'patient', text: '안녕하세요.'}
                 ]
             },
             'oh-owan': {
                 title: '시나리오: 오완',
                 info: 'M · 8 · 상담형 (보호자 동반)',
+                symptom: '혀가 짧아요',
                 messages: [
-                    {role: 'patient', text: '아이가 발음을 잘 못하고 혀가 위로 안 올라가서요. 어머니인데 상담드리고 싶습니다.'}
+                    {role: 'patient', text: '안녕하세요 선생님'}
                 ]
             }
         };
@@ -688,6 +805,14 @@
         const meta = cases[selected] || cases['lee-jiwon'];
         document.getElementById('case-title').textContent = meta.title;
         document.getElementById('patient-info').textContent = meta.info;
+        
+        // 환자 증상 표시
+        const patientInfoEl = document.querySelector('.scenario-info');
+        const symptomEl = document.createElement('span');
+        symptomEl.style.color = 'var(--text-main)';
+        symptomEl.style.fontWeight = '500';
+        symptomEl.textContent = `증상: ${meta.symptom}`;
+        patientInfoEl.appendChild(symptomEl);
 
     const chatMessages = document.getElementById('chat-messages');
     const conversationHistory = [];
@@ -725,25 +850,25 @@
         // suggestion sets per patient id (lee-jiwon, jo-minseon, oh-owan)
         const suggestionSetsByPatient = {
             'lee-jiwon': [
-                ['안녕하세요, 이지원 씨 맞으시죠?','저는 치과의사 ○○○입니다. 입안 불편감에 대해 이야기 나눠도 될까요?','편하게 말씀해주세요. 불편한 점 있으면 알려주세요.'],
-                ['오늘 어떤 문제로 오셨나요?','다른 증상이나 걱정되는 점도 있으신가요?','가장 불편한 증상부터 말씀해 주시겠어요?'],
-                ['언제부터 이런 증상이 있었나요?','증상이 시작될 때 어떤 상황이었나요?','음식을 먹을 때 증상이 더 악화되나요?'],
-                ['제가 보기엔 작은 궤양 가능성이 있어 보여요. 치료 방향은 두 가지입니다.','면역이 약해지면 점막이 쉽게 헐 수 있어요. 연고와 생활습관 조정으로 경과를 볼 수 있습니다.','설명드린 내용 괜찮으셨나요? 추가로 궁금한 점 있으세요?'],
-                ['생활습관을 조정하고 경과를 관찰해보는 방향으로 진행해도 괜찮을까요?','2주간 지켜보고 필요하면 다시 오세요. 통증 심해지면 바로 내원해주세요.','마지막으로 더 궁금한 점 있으신가요?']
+                ['환자 이름 확인', '자신을 명확히 소개', '라포 형성'],
+                ['주증상 확인', '내원 이유 확인', '환자의 우려·기대 확인'],
+                ['언제부터 증상이 시작됐는지 확인', '임상적 특징 확인 (통증 강도, 악화 요인)', '환자의 감정 이해'],
+                ['진단 설명', '치료 옵션 제시', '환자 동의 확인'],
+                ['치료 내용 요약', '예후 설명', '질문 기회 제공', '다음 진료 일정 안내']
             ],
             'jo-minseon': [
-                ['안녕하세요, 조민선님 맞으시죠?','저는 치과의사 ○○○입니다.','아픈 곳 불편하시면 말씀해 주세요.'],
-                ['사랑니 쪽 불편감 때문에 오셨다고 들었는데 이야기 나눠도 괜찮을까요?','오늘 어떤 증상이 가장 신경 쓰이세요?','다른 불편한 점도 있으세요?'],
-                ['언제부터 아프기 시작했나요?','통증은 씹을 때만 생기나요?','붓기나 입 못 벌림도 있나요?'],
-                ['정리하면 며칠 전부터 사랑니 주변이 붓고 씹을 때 통증이 있다는 말씀이죠?','사랑니 주변 잇몸이 염증으로 붓는 경우가 많아요.','약물 치료로 가라앉히고 이후 발치 여부를 판단해야 합니다.'],
-                ['우선 세정 및 약물치료를 시행하고 추적관찰하겠습니다.','부종이 심해지거나 입이 잘 안 벌어지면 바로 내원해주세요.','더 궁금한 점 있으세요?']
+                ['환자 이름 확인', '자신을 명확히 소개', '라포 형성'],
+                ['주증상 확인', '내원 이유 확인', '다른 증상 확인'],
+                ['증상 시작 시점 확인', '통증 특성 파악', '붓기 및 제한 증상 확인'],
+                ['상황 정리 및 설명', '약물 치료 방침 공지', '발치 여부 후속 계획 설명'],
+                ['세정 및 약물 치료 방침 설명', '응급 상황 안내', '추적관찰 일정 안내']
             ],
             'oh-owan': [
-                ['안녕하세요 보호자님, 아이 이름이 오완 맞나요?','저는 치과의사 ○○○입니다.'],
-                ['아이 혀 움직임이 걱정되셔서 오셨다고 들었습니다. 확인해도 괜찮을까요?','어떤 점 때문에 혀가 짧다고 느끼셨나요?'],
-                ['언제부터 아이의 발음에 문제가 있다고 느끼셨어요?','특정 발음에서만 어려움이 있나요?','발음 외에 다른 걱정되는 점은 있나요?'],
-                ['지금까지는 발음 어려움·혀 들기 어려움이 있다는 점이군요.','혀 밑에 있는 실 같은 부분이 짧으면 이런 증상이 생길 수 있어요.','단순 관찰, 혀 운동 치료, 절개술 총 3가지의 방법이 있습니다'],
-                ['일주일 후 다시 발음과 혀 움직임을 확인하겠습니다.','혀가 계속 아프거나 말하기가 더 어려워지면 바로 내원해주세요.','마지막으로 더 궁금한 점 있으신가요?']
+                ['보호자 신원 및 아이 이름 확인', '자신을 명확히 소개', '편안한 분위기 조성'],
+                ['내원 이유 확인', '혀 움직임 문제 확인', '발음 문제 상세히 청취'],
+                ['증상 시작 시점 파악', '특정 발음 확인', '일상생활 영향도 확인'],
+                ['현재 상황 정리', '혀 단축증 설명', '치료 옵션 설명 (관찰/운동/수술)'],
+                ['선택된 치료 방침 설명', '추적관찰 계획 안내', '응급 상황 안내', '다음 방문 일정 예약']
             ]
         };
 
@@ -751,54 +876,89 @@
         const suggestionsTitle = document.getElementById('suggestions-title');
 
         function buildSuggestionChip(text){
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'suggestion-chip';
-            btn.textContent = text;
-            btn.addEventListener('click', () => {
-                const input = document.getElementById('message-input');
-                input.value = text;
-                input.focus();
+            const checklistId = `check-${Math.random().toString(36).substr(2, 9)}`;
+            const container = document.createElement('div');
+            container.className = 'checklist-item';
+            container.innerHTML = `
+                <input type="checkbox" id="${checklistId}">
+                <label for="${checklistId}">${text}</label>
+            `;
+            
+            // 체크박스 변경 감지 - 바로 여기서 추가
+            const checkbox = container.querySelector('input[type="checkbox"]');
+            checkbox.addEventListener('change', () => {
+                checkAllChecklistsCompleted();
             });
-            return btn;
+            
+            return container;
         }
 
-    function renderSuggestionsForStep(stepIndex){
-            // intent map and bounds
-            const intentMap = ['인사 및 환자 확인','방문 이유 확인','정보 수집 및 공감','치료 계획 설명','진료 마무리'];
-            const maxIdx = intentMap.length - 1;
-            const idx = Math.max(0, Math.min(stepIndex, maxIdx));
-            currentStep = idx;
-            // active class on sidebar steps
-            ccgStepEls.forEach((el, i) => el.classList.toggle('active', i === idx));
-            // update title
-            suggestionsTitle.textContent = `추천 질문 (${intentMap[idx]})`;
-            // choose set by selected patient id
+        function renderChecklistForStep(stepIndex) {
             const patientId = selected || 'lee-jiwon';
             const setsForPatient = suggestionSetsByPatient[patientId] || suggestionSetsByPatient['lee-jiwon'];
-            // clear chips
-            suggestionChipsContainer.innerHTML = '';
-            (setsForPatient[idx] || []).forEach(txt => suggestionChipsContainer.appendChild(buildSuggestionChip(txt)));
-            // prev/next visibility
-            const prevBtn = document.getElementById('prev-step-btn');
-            const nextBtn = document.getElementById('next-step-btn');
-            if (prevBtn) prevBtn.style.display = idx === 0 ? 'none' : 'inline-block';
-            if (nextBtn) nextBtn.style.display = idx === maxIdx ? 'none' : 'inline-block';
+            const checklistContainer = document.getElementById(`checklist-${stepIndex}`);
+            
+            if (!checklistContainer) return;
+            
+            checklistContainer.innerHTML = '';
+            (setsForPatient[stepIndex] || []).forEach(txt => {
+                checklistContainer.appendChild(buildSuggestionChip(txt));
+            });
         }
 
-        // wire clicks on sidebar steps
+        function renderAllChecklists() {
+            for (let i = 0; i < 5; i++) {
+                renderChecklistForStep(i);
+            }
+        }
+
+        // Check if all checklists are completed
+        function checkAllChecklistsCompleted() {
+            const allCheckboxes = document.querySelectorAll('.checklist-item input[type="checkbox"]');
+            if (allCheckboxes.length === 0) return false;
+            
+            const allChecked = Array.from(allCheckboxes).every(checkbox => checkbox.checked);
+            const endBtn = document.getElementById('end-btn');
+            
+            console.log(`[Checklist] Total: ${allCheckboxes.length}, Checked: ${Array.from(allCheckboxes).filter(c => c.checked).length}, All completed: ${allChecked}`);
+            
+            if (allChecked) {
+                endBtn.classList.add('all-completed');
+                console.log('[Checklist] ✅ All completed - button turned turquoise');
+            } else {
+                endBtn.classList.remove('all-completed');
+                console.log('[Checklist] ❌ Not all completed - button back to gray');
+            }
+            
+            return allChecked;
+        }
+
+        // Initialize all checklists on page load
+        renderAllChecklists();
+        checkAllChecklistsCompleted();
+
+        // Click handler for stages to toggle checklist visibility
         ccgStepEls.forEach((el, i) => {
-            el.addEventListener('click', () => renderSuggestionsForStep(i));
+            el.addEventListener('click', () => {
+                currentStep = i;
+                const checklistEl = document.getElementById(`checklist-${i}`);
+                
+                // Close all other checklists
+                document.querySelectorAll('.step-checklist').forEach((cl, idx) => {
+                    if (idx !== i) {
+                        cl.classList.remove('open');
+                    }
+                });
+                
+                // Toggle current checklist
+                checklistEl.classList.toggle('open');
+                
+                // Update active class
+                ccgStepEls.forEach((step, idx) => {
+                    step.classList.toggle('active', idx === i);
+                });
+            });
         });
-
-    // prev/next buttons
-    const nextStepBtn = document.getElementById('next-step-btn');
-    const prevStepBtn = document.getElementById('prev-step-btn');
-    if (nextStepBtn) nextStepBtn.addEventListener('click', () => renderSuggestionsForStep(currentStep + 1));
-    if (prevStepBtn) prevStepBtn.addEventListener('click', () => renderSuggestionsForStep(currentStep - 1));
-
-        // initial render
-        renderSuggestionsForStep(0);
 
         // enable send input
         const inputField = document.getElementById('message-input');

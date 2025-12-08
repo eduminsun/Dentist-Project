@@ -17,7 +17,7 @@ module.exports = async (req, res) => {
     let personaDetail = '';
     
     if (caseId === 'jo-minseon') {
-      personaDetail = `\n특별 지시: 당신은 민감한 환자 조민선입니다. 발치를 하고 싶지 않아 합니다. 응답은 1-2 문장, 한국어로 유지하세요.`;
+      personaDetail = `\n특별 지시: 당신은 민감한 환자 조민선입니다. 초반에는 발치에 대한 거부감을 드러냅니다. 응답은 1-2 문장, 한국어로 유지하세요.`;
     } else if (caseId === 'oh-owan') {
       personaDetail = `\n특별 지시: 당신은 환자 오완의 어머니(보호자)입니다. 아이의 건강을 걱정하면서 질문합니다. 응답은 1-2 문장, 한국어로 유지하세요.`;
     } else if (caseId === 'lee-jiwon') {

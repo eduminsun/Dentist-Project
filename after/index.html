@@ -13,25 +13,30 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
-            background-color: #ffffff;
+            background: #1a1a1a;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
+            padding: 40px 20px;
         }
 
         .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .hero {
             text-align: center;
-            max-width: 600px;
-            width: 100%;
+            background: #2a2a2a;
+            border-radius: 20px;
+            padding: 60px 40px;
+            margin-bottom: 60px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid #444;
         }
 
         h1 {
             font-size: 3.5rem;
             font-weight: 700;
-            color: #1a1a1a;
+            color: #ffffff;
             margin-bottom: 1rem;
             letter-spacing: -0.02em;
         }
@@ -39,8 +44,8 @@
         .tagline {
             font-size: 1.125rem;
             font-weight: 400;
-            color: #666666;
-            margin-bottom: 4rem;
+            color: #b0b0b0;
+            margin-bottom: 2rem;
             line-height: 1.6;
         }
 
@@ -55,35 +60,182 @@
             border-radius: 12px;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(32, 178, 170, 0.2);
+            box-shadow: 0 4px 12px rgba(32, 178, 170, 0.4);
             text-decoration: none;
         }
 
         .primary-button:hover {
             background-color: #1a9d96;
             transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(32, 178, 170, 0.3);
+            box-shadow: 0 6px 16px rgba(32, 178, 170, 0.6);
         }
 
         .primary-button:active {
             transform: translateY(0);
-            box-shadow: 0 2px 8px rgba(32, 178, 170, 0.2);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        /* CCG 설명 섹션 */
+        .ccg-section {
+            background: #2a2a2a;
+            border-radius: 20px;
+            padding: 50px 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid #444;
+        }
+
+        .ccg-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #20b2aa;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .ccg-description {
+            font-size: 1rem;
+            color: #d0d0d0;
+            line-height: 1.8;
+            margin-bottom: 50px;
+            text-align: center;
+            background: #1a1a1a;
+            padding: 24px;
+            border-radius: 12px;
+            border-left: 4px solid #20b2aa;
+        }
+
+        /* 수직 타임라인 스타일 */
+        .ccg-timeline {
+            position: relative;
+            padding-left: 120px;
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+
+        .ccg-timeline::before {
+            content: '';
+            position: absolute;
+            left: 23px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(to bottom, #20b2aa, #1a9d96);
+        }
+
+        .timeline-item {
+            margin-bottom: 50px;
+            position: relative;
+            padding-left: 80px;
+        }
+
+        .timeline-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: -7px;
+            top: -5px;
+            width: 60px;
+            height: 60px;
+            background: #20b2aa;
+            border: 4px solid #2a2a2a;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            font-size: 1.3rem;
+            z-index: 10;
+            box-shadow: 0 0 0 8px #1a1a1a;
+        }
+
+        .timeline-content {
+            padding-left: 0;
+            text-align: left;
+        }
+
+        .step-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 12px;
+        }
+
+        .step-content {
+            font-size: 0.95rem;
+            color: #b0b0b0;
+            line-height: 1.6;
+        }
+
+        .step-content li {
+            margin-bottom: 8px;
+            margin-left: 20px;
+        }
+
+        /* 하단 CTA 섹션 */
+        .ccg-cta {
+            text-align: center;
+            padding-top: 40px;
+            margin-top: 40px;
+            border-top: 1px solid #444;
+        }
+
+        .ccg-cta .primary-button {
+            display: inline-block;
         }
 
         /* 반응형 디자인 */
         @media (max-width: 768px) {
+            .hero {
+                padding: 40px 24px;
+                margin-bottom: 40px;
+            }
+
             h1 {
                 font-size: 2.5rem;
             }
 
             .tagline {
                 font-size: 1rem;
-                margin-bottom: 3rem;
+                margin-bottom: 2rem;
             }
 
-            .primary-button {
-                font-size: 1.125rem;
-                padding: 1rem 2.5rem;
+            .ccg-section {
+                padding: 30px 24px;
+            }
+
+            .ccg-title {
+                font-size: 1.5rem;
+            }
+
+            .ccg-timeline {
+                padding-left: 100px;
+            }
+
+            .ccg-timeline::before {
+                left: 20px;
+            }
+
+            .timeline-item {
+                padding-left: 70px;
+                margin-bottom: 40px;
+            }
+
+            .timeline-dot {
+                width: 50px;
+                height: 50px;
+                font-size: 1.1rem;
+                left: -3px;
+            }
+
+            .timeline-content {
+                padding-left: 20px;
+            }
+
+            .step-content li {
+                margin-left: 20px;
             }
         }
 
@@ -94,7 +246,7 @@
 
             .tagline {
                 font-size: 0.9rem;
-                margin-bottom: 2.5rem;
+                margin-bottom: 2rem;
             }
 
             .primary-button {
@@ -103,14 +255,138 @@
                 width: 100%;
                 max-width: 300px;
             }
+
+            .ccg-description {
+                font-size: 0.9rem;
+                padding: 16px;
+            }
+
+            .ccg-timeline {
+                padding-left: 90px;
+            }
+
+            .ccg-timeline::before {
+                left: 18px;
+            }
+
+            .timeline-item {
+                padding-left: 60px;
+                margin-bottom: 35px;
+            }
+
+            .timeline-dot {
+                width: 40px;
+                height: 40px;
+                font-size: 0.9rem;
+                left: -2px;
+            }
+
+            .timeline-content {
+                padding-left: 15px;
+            }
+
+            .step-title {
+                font-size: 1.1rem;
+            }
+
+            .step-content {
+                font-size: 0.9rem;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>덴트찰리</h1>
-        <p class="tagline">치과 환자 진료, 지금 바로 연습해보세요.</p>
-        <a href="case-selection.html" class="primary-button">환자와 대화 시작하기</a>
+        <!-- 히어로 섹션 -->
+        <div class="hero">
+            <h1>덴트찰리</h1>
+            <p class="tagline">치과 환자 진료, 지금 바로 연습해보세요.</p>
+            <a href="case-selection.html" class="primary-button">환자와 대화 시작하기</a>
+        </div>
+
+        <!-- CCG 설명 섹션 -->
+        <div class="ccg-section">
+            <h2 class="ccg-title">Calgary–Cambridge Guide란?</h2>
+            <div class="ccg-description">
+                Calgary–Cambridge Guide(CCG)는 환자 중심 의료 면담을 위한 국제 표준 모델로,
+                의사–환자 간의 소통뿐 아니라 관계 형성, 정보 탐색, 설명·계획 수립, 진료 마무리까지
+                진료 전 과정을 구조화하여 안내하는 상호작용 교육 모델입니다.
+            </div>
+
+            <!-- 수직 타임라인 -->
+            <div class="ccg-timeline">
+                <!-- 1단계 -->
+                <div class="timeline-item">
+                    <div class="timeline-dot">1</div>
+                    <div class="timeline-content">
+                        <div class="step-title">인사 및 환자 확인</div>
+                        <ul class="step-content">
+                            <li>환자 신원 확인</li>
+                            <li>라포 형성(환자에게 존중/관심을 보임)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 2단계 -->
+                <div class="timeline-item">
+                    <div class="timeline-dot">2</div>
+                    <div class="timeline-content">
+                        <div class="step-title">방문 이유 확인</div>
+                        <ul class="step-content">
+                            <li>환자의 우려·기대 확인</li>
+                            <li>환자의 말 경청</li>
+                            <li>주 증상 확인</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 3단계 -->
+                <div class="timeline-item">
+                    <div class="timeline-dot">3</div>
+                    <div class="timeline-content">
+                        <div class="step-title">정보 수집 및 공감</div>
+                        <ul class="step-content">
+                            <li>개방형 질문을 통한 정보 확인</li>
+                            <li>임상적 특징 확인(통증 원인, 통증 강도, 약물효과 확인)</li>
+                            <li>치과 및 전신 병력청취</li>
+                            <li>환자의 감정·맥락 이해</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 4단계 -->
+                <div class="timeline-item">
+                    <div class="timeline-dot">4</div>
+                    <div class="timeline-content">
+                        <div class="step-title">치료 계획 설명</div>
+                        <ul class="step-content">
+                            <li>쉬운 언어 사용</li>
+                            <li>환자 동의 확인</li>
+                            <li>치료 옵션/경과 공유</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 5단계 -->
+                <div class="timeline-item">
+                    <div class="timeline-dot">5</div>
+                    <div class="timeline-content">
+                        <div class="step-title">진료 마무리</div>
+                        <ul class="step-content">
+                            <li>치료 내용 요약</li>
+                            <li>예후 설명</li>
+                            <li>질문 기회 제공</li>
+                            <li>다음 진료 일정 안내</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 하단 CTA 버튼 -->
+            <div class="ccg-cta">
+                <a href="case-selection.html" class="primary-button">환자와 대화 시작하기</a>
+            </div>
+        </div>
     </div>
 </body>
 </html>

@@ -152,6 +152,16 @@
             margin-bottom: 20px;
         }
 
+        .elapsed-time {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            padding: 12px 16px;
+            background: rgba(0, 163, 255, 0.1);
+            border-radius: 10px;
+            border-left: 3px solid var(--accent-blue);
+        }
+
         .history-wrapper {
             display: flex;
             flex-direction: column;
@@ -335,6 +345,7 @@
 
         <section class="history-section">
             <h2>대화 복기</h2>
+            <div class="elapsed-time" id="elapsed-time"></div>
             <div class="history-wrapper" id="conversation-wrapper">
                 <!-- 대화가 여기에 렌더링됨 -->
             </div>
