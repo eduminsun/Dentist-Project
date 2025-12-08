@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>덴트찰리 - 예시 피드백 (CCG 5단계)</title>
+  <style>
+    :root {
+      --bg: #1e2630;
+      --panel: #22303c;
+      --text: #eaf2ff;
+      --muted: #b9c6d6;
+      --accent: #20b2aa;
+      --accent-darker: #1a9d96;
+      --ok: #55d187;
+      --warn: #f7b955;
+      --border: rgba(255,255,255,0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .container { max-width: 980px; margin: 0 auto; padding: 24px; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    header h1 { font-size: 1.4rem; margin: 0; }
+    .meta { color: var(--muted); font-size: 0.95rem; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+    .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+    .stage {
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px;
+      }
+  .stage .title { display: flex; align-items: center; gap: 8px; font-weight: 700; justify-content: space-between; font-size: 0.95rem; white-space: nowrap; }
+  .stage .title-left { display:flex; align-items:center; gap:8px; font-size: 0.95rem; }
+      .toggle {
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.06);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+    .badge { display: inline-flex; width: 24px; height: 24px; border-radius: 999px; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); color: var(--muted); font-weight: 700; }
+    .ok { color: var(--ok); }
+    .warn { color: var(--warn); }
+    .checklist { margin-top: 6px; }
+    .checklist li { margin: 6px 0; color: var(--muted); }
+  .details { margin-top: 10px; display:none; padding-top: 8px; border-top: 1px dashed var(--border); }
+  .details.open { display:block; }
+  .details .checklist { margin-top: 8px; }
+  .details .checklist li { line-height: 1.5; padding: 4px 0; }
+    .check { color: var(--ok); font-weight: 700; margin-right: 6px; }
+    .miss { color: var(--warn); font-weight: 700; margin-right: 6px; }
+    .section-title { font-weight: 700; margin: 18px 0 10px; }
+    .improve-list { margin: 0; padding-left: 18px; }
+    .improve-list li { margin: 8px 0; color: var(--muted); }
+    .footer { margin-top: 20px; display:flex; gap:10px; }
+    .btn { border-radius: 10px; padding: 10px 12px; border: 1px solid var(--border); background: rgba(255,255,255,0.06); color: var(--text); cursor: pointer; }
+    .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent-darker); }
+    .summary { margin-top: 16px; color: var(--muted); font-size: 0.95rem; }
+    @media (max-width: 960px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+  </head>
+<body>
+  <div class="container">
+    <header>
+      <h1>피드백 · CCG 5단계</h1>
+      <div class="meta">케이스: 이지원 · 증상: 입 안이 쓰라려요</div>
+    </header>
+
+    <!-- 핵심 5단계 체크 요약 (수평 카드, 토글은 카드 내부 아래에 펼침) -->
+    <div class="panel">
+      <div style="font-weight:700; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
+        <span>CCG 핵심 5단계</span>
+        <button class="toggle" id="global-toggle">자세히</button>
+      </div>
+      <div class="grid">
+        <!-- 1단계 카드 -->
+        <div class="stage">
+          <div class="title">
+            <div class="title-left"><span class="badge">1</span> 인사 및 이름 확인</div>
+            <span class="ok">✓</span>
+          </div>
+          <!-- per-stage toggle removed; use global toggle above -->
+          <div id="details-1" class="details">
+            <ul class="checklist">
+              <li><span class="check">✓</span> 환자 이름 확인</li>
+              <li><span class="check">✓</span> 자기 소개 및 라포 형성</li>
+              <li><span class="miss">•</span> 편안함 확인 멘트 부족</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 2단계 카드 -->
+        <div class="stage">
+          <div class="title">
+            <div class="title-left"><span class="badge">2</span> 방문 이유 확인</div>
+            <span class="ok">✓</span>
+          </div>
+          <!-- per-stage toggle removed; use global toggle above -->
+          <div id="details-2" class="details">
+            <ul class="checklist">
+              <li><span class="check">✓</span> 주요 증상 파악</li>
+              <li><span class="check">✓</span> 우려/기대 확인</li>
+              <li><span class="miss">•</span> 증상 영향도 추가 질문 필요</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 3단계 카드 -->
+        <div class="stage">
+          <div class="title">
+            <div class="title-left"><span class="badge">3</span> 정보 수집 및 공감</div>
+            <span class="warn">△</span>
+          </div>
+          <!-- per-stage toggle removed; use global toggle above -->
+          <div id="details-3" class="details">
+            <ul class="checklist">
+              <li><span class="check">✓</span> 증상 시작 시점 확인</li>
+              <li><span class="miss">•</span> 임상적 특징(악화/완화) 질문 부족</li>
+              <li><span class="miss">•</span> 환자 감정에 대한 공감 표현 부족</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 4단계 카드 -->
+        <div class="stage">
+          <div class="title">
+            <div class="title-left"><span class="badge">4</span> 치료 계획 설명</div>
+            <span class="ok">✓</span>
+          </div>
+          <!-- per-stage toggle removed; use global toggle above -->
+          <div id="details-4" class="details">
+            <ul class="checklist">
+              <li><span class="check">✓</span> 진단 및 치료 옵션 제시</li>
+              <li><span class="check">✓</span> 환자 동의(Shared decision)</li>
+              <li><span class="miss">•</span> 대안/예상 경과 비교 설명 보완</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 5단계 카드 -->
+        <div class="stage">
+          <div class="title">
+            <div class="title-left"><span class="badge">5</span> 진료 마무리</div>
+            <span class="ok">✓</span>
+          </div>
+          <!-- per-stage toggle removed; use global toggle above -->
+          <div id="details-5" class="details">
+            <ul class="checklist">
+              <li><span class="check">✓</span> 치료 내용 요약</li>
+              <li><span class="check">✓</span> 다음 진료 일정 안내</li>
+              <li><span class="miss">•</span> 환자 질문 기회 제공 미흡</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="summary">완료: 4/5 · 개선 필요: 1,4,5단계 일부, 3단계 공감/임상특징</div>
+    </div>
+
+    <!-- 개선 포인트 -->
+    <div class="panel" style="margin-top:16px;">
+      <div class="section-title">다음 연습에서 집중할 개선 포인트</div>
+      <ul class="improve-list">
+        <li>인사 직후 환자가 편안한지 확인하며 환자가 편하게 말할 수 있도록 관계를 형성하세요.</li>
+        <li>정보 수집 시 증상 악화 요인에 대한 질문을 하고, 일상생활의 영향을 살펴보세요.</li>
+        <li>환자의 감정에 대해 명시적 공감(예: “그럴 수 있어요, 많이 불편하셨겠어요.”)이 부족합니다.</li>
+        <li>환자에게 치료 옵션을 제공할 때 장단점 및 예상 경과를 설명해주세요.</li>
+        <li>마무리 단계에서 “추가로 궁금한 점 있으세요?”등의 발화를 통해 환자에게 질문 기회를 제공하세요.</li>
+      </ul>
+    </div>
+
+    <div class="footer">
+      <button class="btn">다시 연습하기</button>
+      <button class="btn primary">다음 케이스로 넘어가기</button>
+      </div>
+  <script>
+    // Single global toggle button controls all details sections
+    document.addEventListener('DOMContentLoaded', () => {
+      const detailsEls = Array.from(document.querySelectorAll('.details'));
+      const globalToggle = document.getElementById('global-toggle');
+
+      const setAll = (open) => {
+        detailsEls.forEach(el => el.classList.toggle('open', open));
+        globalToggle.textContent = open ? '접기' : '자세히';
+      };
+
+      globalToggle.addEventListener('click', () => {
+        const anyClosed = detailsEls.some(el => !el.classList.contains('open'));
+        setAll(anyClosed);
+      });
+    });
+  </script>
+</body>
+</html>

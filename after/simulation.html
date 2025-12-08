@@ -80,7 +80,7 @@
         .toggle-btn,
         .end-btn {
             background: rgba(0, 0, 0, 0.08);
-            border: none;
+            border: 1px solid rgba(0, 0, 0, 0.18); /* subtle border for better visibility */
             color: #ffffff;
             padding: 10px 14px;
             border-radius: 10px;
@@ -103,6 +103,7 @@
             color: #ffffff;
             font-weight: 600;
             box-shadow: 0 4px 12px rgba(32, 178, 170, 0.3);
+            border: 1px solid rgba(32, 178, 170, 0.6); /* slightly more visible when completed */
         }
 
         .end-btn.all-completed:hover {
@@ -1044,7 +1045,7 @@
                 // If an error message was already shown above, avoid duplicate generic message
                 const errText = (err && err.message) ? err.message : '';
                 if (!errText.includes('서버 오류')) {
-                    appendMessage('patient', '응답에 실패했습니다. 나중에 다시 시도해주세요.');
+                    appendMessage('patient', '다시 말씀해 주세요.');
                 }
             })
             .finally(() => {

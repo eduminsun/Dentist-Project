@@ -99,26 +99,24 @@ module.exports = async (req, res) => {
     // 3단계: API 호출
     console.log('[API_CALL] Generating feedback...');
     
-    const apiKey1 = process.env.GENAI_API_KEY;
-    const apiKey2 = process.env.GENAI_API_KEY_2 || apiKey1;
-    const selectedKey = userMessages.length % 2 === 0 ? apiKey1 : apiKey2;
+  const selectedKey = process.env.GENAI_API_KEY; // always use paid primary key
     
     if (!selectedKey) {
       return res.status(500).json({ error: 'API key not configured' });
     }
 
-    const prompt = `치과 진료 5단계로 평가:
-1. 인사 및 환자 확인
-2. 방문 이유 확인
-3. 정보 수집 및 공감
-4. 치료 계획 설명
-5. 진료 마무리
+  const prompt = `다음 의사 발언을 바탕으로 치과 진료 5단계를 평가하세요.
+반드시 JSON만 출력하고, 추가 텍스트/설명은 금지합니다.
+출력 스키마:
+{"feedbacks": [{"stage": "1단계", "done": true, "text": "한 줄 평가"}]}
+규칙:
+- 5개 항목만 포함(1~5단계)
+- "stage"는 "1단계", "2단계", ... 형식
+- "done"은 true/false
+- "text"는 한 줄 설명
 
 의사 발언:
-${userMessages}
-
-JSON으로 응답 (5개 항목만):
-{"feedbacks": [{"stage": "1단계", "done": true, "text": "한 줄 평가"}]}`;
+${userMessages}`;
 
     const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + selectedKey, {
       method: 'POST',
@@ -148,18 +146,33 @@ JSON으로 응답 (5개 항목만):
     }
 
     const data = await response.json();
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  console.log('[FEEDBACK_RAW_TEXT]', (responseText || '').slice(0, 300));
     
-    // JSON 추출
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    const feedbackData = jsonMatch ? JSON.parse(jsonMatch[0]) : { feedbacks: [] };
+    // JSON 추출 (보호)
+    let feedbacks = [];
+    try {
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (Array.isArray(parsed.feedbacks)) feedbacks = parsed.feedbacks;
+      }
+    } catch (e) {
+      console.error('[FEEDBACK_PARSE_ERROR]', e.message);
+      feedbacks = [];
+    }
+
+    // Fallback: ensure 5 stages exist if empty
+    if (!Array.isArray(feedbacks) || feedbacks.length === 0) {
+      feedbacks = [1,2,3,4,5].map(n => ({ stage: `${n}단계`, done: false, text: '' }));
+    }
 
     // 4단계: 캐시에 저장
-    feedbackCache.set(cacheKey, feedbackData.feedbacks);
-    await setToRedis(cacheKey, feedbackData.feedbacks);
+    feedbackCache.set(cacheKey, feedbacks);
+    await setToRedis(cacheKey, feedbacks);
 
     return res.json({ 
-      feedbacks: feedbackData.feedbacks, 
+      feedbacks, 
       cached: false
     });
 
