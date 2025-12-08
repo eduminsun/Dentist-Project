@@ -4,8 +4,8 @@
 const responseCache = new Map();
 
 // Redis 설정
-const UPSTASH_REST_URL = process.env.UPSTASH_REST_URL;
-const UPSTASH_REST_TOKEN = process.env.UPSTASH_REST_TOKEN;
+const UPSTASH_REST_URL = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_REST_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
 function getCacheKey(caseId, userMessage) {
   const normalized = (userMessage || '').trim().replace(/\s+/g, ' ');
