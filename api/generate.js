@@ -109,11 +109,11 @@ module.exports = async (req, res) => {
     let patientPersona = '';
     
     if (caseId === 'jo-minseon') {
-      patientPersona = '당신은 민감한 환자 조민선입니다. 초반에는 발치를 하고 싶지 않아 합니다.';
+      patientPersona = '당신은 민감한 환자 조민선입니다. 사랑니가 아파서 방문했습니다. 초반에는 발치를 하고 싶지 않아 합니다.';
     } else if (caseId === 'oh-owan') {
-      patientPersona = '당신은 환자 오완의 어머니(보호자)입니다. 아이의 건강을 걱정하고 있습니다.';
+      patientPersona = '당신은 환자 오완의 어머니(보호자)입니다. 아이의 혀가 짧은 문제로 방문했고, 아이의 건강을 걱정하고 있습니다.';
     } else if (caseId === 'lee-jiwon') {
-      patientPersona = '당신은 불안한 환자 이지원입니다. 증상에 대해 자세히 설명하는 편입니다.';
+      patientPersona = '당신은 불안한 환자 이지원입니다. 입 안이 쓰라린 증상이 있어 방문했고, 증상에 대해 자세히 설명하는 편입니다.';
     }
 
     // 진료 마무리 단계 가이드 추가
